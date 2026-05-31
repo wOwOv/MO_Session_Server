@@ -39,7 +39,21 @@ void DBConnector::Disconnect()
 	mysql_close(_connection);
 }
 
-bool DBConnector::QuerySave(const WCHAR* String, ...)
+bool DBConnector::BeginTransaction()
+{
+	return mysql_query(_connection, "BEGIN") == 0;
+}
+
+bool DBConnector::Commit()
+{
+	return mysql_query(_connection, "COMMIT") == 0;
+}
+
+bool DBConnector::Rollback()
+{
+	return mysql_query(_connection, "ROLLBACK") == 0;
+}
+
 void DBConnector::GetQueryResult(MYSQL_RES** result)
 {
 	*result = _sqlResult;
@@ -49,13 +63,8 @@ bool DBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 {
 	char cquery[4096];
 
-	va_list va;
-	va_start(va, String);
-	HRESULT result = StringCchVPrintfW(wquery, 4096, String, va);
-	va_end(va);
-
 	WideCharToMultiByte(CP_UTF8, 0, wquery, -1, cquery, 4096, NULL, NULL);
-	
+
 	ULONGLONG start = GetTickCount64();
 	_queryStat = mysql_query(_connection, cquery);
 	ULONGLONG time = GetTickCount64() - start;
@@ -64,7 +73,7 @@ bool DBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 		LOG(L"Database", LVSYSTEM, L"Mysql query error : %s", mysql_error(&_conn));
 		return false;
 	}
-	
+
 	if (time >= _limitTime)
 	{
 		LOG(L"Database", LVSYSTEM, L"Mysql query time : %d / query : %s", time, wquery);
@@ -73,7 +82,7 @@ bool DBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 	do {
 		_sqlResult = mysql_store_result(_connection);
 		if (_sqlResult) {
-			mysql_free_result(_sqlResult);  // 결과 필요 없으니 바로 해제
+			mysql_free_result(_sqlResult);
 		}
 	} while (mysql_next_result(_connection) == 0);
 
@@ -82,13 +91,7 @@ bool DBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 
 bool DBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 {
-	WCHAR wquery[4096];
 	char cquery[4096];
-
-	va_list va;
-	va_start(va, String);
-	HRESULT result = StringCchVPrintfW(wquery, 4096, String, va);
-	va_end(va);
 
 	WideCharToMultiByte(CP_UTF8, 0, wquery, -1, cquery, 4096, NULL, NULL);
 
@@ -169,7 +172,75 @@ void TLSDBConnector::Disconnect()
 	mysql_close(sqldata->_connection);
 }
 
-bool TLSDBConnector::QuerySave(const WCHAR* String, ...)
+bool TLSDBConnector::BeginTransaction()
+{
+	SQLDATA* sqldata = (SQLDATA*)TlsGetValue(_tlsIndex);
+	if (sqldata == nullptr)
+	{
+		sqldata = new SQLDATA;
+
+		mysql_init(&sqldata->_conn);
+
+		sqldata->_connection = mysql_real_connect(&sqldata->_conn, _host, _user, _passwd, _db, _port, (char*)NULL, 0);
+		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
+		if (sqldata->_connection == NULL)
+		{
+			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
+			return false;
+		}
+		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
+	}
+
+
+	return mysql_query(sqldata->_connection, "BEGIN") == 0;
+}
+
+bool TLSDBConnector::Commit()
+{
+	SQLDATA* sqldata = (SQLDATA*)TlsGetValue(_tlsIndex);
+	if (sqldata == nullptr)
+	{
+		sqldata = new SQLDATA;
+
+		mysql_init(&sqldata->_conn);
+
+		sqldata->_connection = mysql_real_connect(&sqldata->_conn, _host, _user, _passwd, _db, _port, (char*)NULL, 0);
+		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
+		if (sqldata->_connection == NULL)
+		{
+			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
+			return false;
+		}
+		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
+	}
+
+
+	return mysql_query(sqldata->_connection, "COMMIT") == 0;
+}
+
+bool TLSDBConnector::Rollback()
+{
+	SQLDATA* sqldata = (SQLDATA*)TlsGetValue(_tlsIndex);
+	if (sqldata == nullptr)
+	{
+		sqldata = new SQLDATA;
+
+		mysql_init(&sqldata->_conn);
+
+		sqldata->_connection = mysql_real_connect(&sqldata->_conn, _host, _user, _passwd, _db, _port, (char*)NULL, 0);
+		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
+		if (sqldata->_connection == NULL)
+		{
+			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
+			return false;
+		}
+		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
+	}
+
+
+	return mysql_query(sqldata->_connection, "ROLLBACK") == 0;
+}
+
 bool TLSDBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 {
 	SQLDATA* sqldata = (SQLDATA*)TlsGetValue(_tlsIndex);
@@ -183,20 +254,13 @@ bool TLSDBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			// mysql_errno(&_MySQL);
 			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
 	}
 
-	WCHAR wquery[4096];
 	char cquery[4096];
-
-	va_list va;
-	va_start(va, String);
-	HRESULT result = StringCchVPrintfW(wquery, 4096, String, va);
-	va_end(va);
 
 	WideCharToMultiByte(CP_UTF8, 0, wquery, -1, cquery, 4096, NULL, NULL);
 
@@ -217,7 +281,7 @@ bool TLSDBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 	do {
 		sqldata->_sqlResult = mysql_store_result(sqldata->_connection);
 		if (sqldata->_sqlResult) {
-			mysql_free_result(sqldata->_sqlResult);  // 결과 필요 없으니 바로 해제
+			mysql_free_result(sqldata->_sqlResult);
 		}
 	} while (mysql_next_result(sqldata->_connection) == 0);
 
@@ -237,20 +301,13 @@ bool TLSDBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			// mysql_errno(&_MySQL);
 			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
 	}
 
-	WCHAR wquery[4096];
 	char cquery[4096];
-
-	va_list va;
-	va_start(va, String);
-	HRESULT result = StringCchVPrintfW(wquery, 4096, String, va);
-	va_end(va);
 
 	WideCharToMultiByte(CP_UTF8, 0, wquery, -1, cquery, 4096, NULL, NULL);
 
@@ -269,7 +326,6 @@ bool TLSDBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 	}
 
 	sqldata->_sqlResult = mysql_store_result(sqldata->_connection);
-
 
 	return true;
 }

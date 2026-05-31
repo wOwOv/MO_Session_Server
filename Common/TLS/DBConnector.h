@@ -7,10 +7,14 @@ class DBConnector
 public:
 	DBConnector(const char* txtname);
 	~DBConnector();
+	
 	bool Connect();
 	void Disconnect();
-	bool QuerySave( const WCHAR* String, ...);
-	bool QuerySelect(const WCHAR* String, ...);
+
+	bool BeginTransaction();
+	bool Commit();
+	bool Rollback();
+
 	template <typename... Args>
 	bool QuerySave(const WCHAR* String, Args&&... args)
 	{
@@ -75,10 +79,14 @@ private:
 public:
 	TLSDBConnector(const char* txtname);
 	~TLSDBConnector();
+
 	bool Connect();
 	void Disconnect();
-	bool QuerySave(const WCHAR* String, ...);
-	bool QuerySelect(const WCHAR* String, ...);
+
+	bool BeginTransaction();
+	bool Commit();
+	bool Rollback();
+	
 	template <typename... Args>
 	bool QuerySave(const WCHAR* String, Args&&... args)
 	{
