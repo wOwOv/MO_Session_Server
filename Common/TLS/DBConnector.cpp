@@ -4,6 +4,7 @@
 #pragma comment(lib, "mysqlclient.lib")
 #include <iostream>
 #include "Logger.h"
+#include <Parser.h>
 #include <strsafe.h>
 #include <windows.h>
 
@@ -107,130 +108,17 @@ bool DBConnector::QuerySelect(const WCHAR* String, ...)
 
 void DBConnector::Parsing(const char* txtname)
 {
+	//DBInfo.txt 파싱해오기
+	Parser parser;
+	parser.LoadFile(txtname);
 
-	//DBConnect_config.txt 파싱해오기
+	parser.GetString("DB_INFO", "host", _host, sizeof(_host));
+	parser.GetString("DB_INFO", "user", _user, sizeof(_user));
+	parser.GetString("DB_INFO", "passwd", _passwd, sizeof(_passwd));
+	parser.GetString("DB_INFO", "db", _db, sizeof(_db));
 
-//txtfile open
-	FILE* file;
-	fopen_s(&file, txtname, "rb");
-	if (file == NULL)
-	{
-		printf("fopen error\n");
-	}
-	//버퍼에 복사
-	fseek(file, 0, SEEK_END);
-	int size = ftell(file);
-	char* buffer = new char[size];
-	rewind(file);
-	size_t frerror = fread(buffer, size, 1, file);
-	if (frerror == 0)
-	{
-		printf("fread error\n");
-	}
-	fclose(file);
-	char* ptr = buffer;
-	char port[5];
-	char limitTime[5];
-	int cnt = 0;
-
-	//host parsing
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		_host[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	_host[cnt] = '\0';
-
-	//user parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		_user[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	_user[cnt] = '\0';
-
-	//passwd parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		_passwd[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	_passwd[cnt] = '\0';
-
-	//db parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		_db[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	_db[cnt] = '\0';
-
-	//port parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		port[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	port[cnt] = '\0';
-
-	//limitTime parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		limitTime[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	limitTime[cnt] = '\0';
-
-
-
-	//parsing한 것들 숫자로 바꿔서 주기
-	_port = atoi(port);
-	_limitTime = atoi(limitTime);
-
-
-	delete[] buffer;
-
+	parser.GetValue("DB_INFO", "port", (int*)&_port);
+	parser.GetValue("DB_INFO", "limitTime", (int*)&_limitTime);
 }
 
 TLSDBConnector::TLSDBConnector(const char* txtname)
@@ -388,127 +276,16 @@ void TLSDBConnector::GetQueryResult(MYSQL_RES** result)
 
 void TLSDBConnector::Parsing(const char* txtname)
 {
-	//DBConnect_config.txt 파싱해오기
+	//DBInfo.txt 파싱해오기
+	Parser parser;
+	parser.LoadFile(txtname);
 
-//txtfile open
-	FILE* file;
-	fopen_s(&file, txtname, "rb");
-	if (file == NULL)
-	{
-		printf("fopen error\n");
-	}
-	//버퍼에 복사
-	fseek(file, 0, SEEK_END);
-	int size = ftell(file);
-	char* buffer = new char[size];
-	rewind(file);
-	size_t frerror = fread(buffer, size, 1, file);
-	if (frerror == 0)
-	{
-		printf("fread error\n");
-	}
-	fclose(file);
-	char* ptr = buffer;
-	char port[5];
-	char limitTime[5];
-	int cnt = 0;
+	parser.GetString("DB_INFO", "host", _host, sizeof(_host));
+	parser.GetString("DB_INFO", "user", _user, sizeof(_user));
+	parser.GetString("DB_INFO", "passwd", _passwd, sizeof(_passwd));
+	parser.GetString("DB_INFO", "db", _db, sizeof(_db));
 
-	//host parsing
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		_host[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	_host[cnt] = '\0';
-
-	//user parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		_user[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	_user[cnt] = '\0';
-
-	//passwd parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		_passwd[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	_passwd[cnt] = '\0';
-
-	//db parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		_db[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	_db[cnt] = '\0';
-
-	//port parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		port[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	port[cnt] = '\0';
-
-	//limitTime parsing
-	cnt = 0;
-	while (*ptr != ':')
-	{
-		ptr++;
-	}
-	ptr++;
-	while (*ptr != 0x0d)
-	{
-		limitTime[cnt] = *ptr;
-		cnt++;
-		ptr++;
-	}
-	limitTime[cnt] = '\0';
-
-	
-
-	//parsing한 것들 숫자로 바꿔서 주기
-	_port = atoi(port);
-	_limitTime = atoi(limitTime);
-
-
-	delete[] buffer;
+	parser.GetValue("DB_INFO", "port", (int*)&_port);
+	parser.GetValue("DB_INFO", "limitTime", (int*)&_limitTime);
 }
 

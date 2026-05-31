@@ -25,7 +25,7 @@ private:
 	char _passwd[64];
 	char _db[64];
 	unsigned int _port;
-	ULONGLONG _limitTime;
+	unsigned int _limitTime;
 
 };
 
@@ -60,5 +60,5 @@ private:
 	char _passwd[64];
 	char _db[64];
 	unsigned int _port;
-	ULONGLONG _limitTime;
+	unsigned int _limitTime;
 };
