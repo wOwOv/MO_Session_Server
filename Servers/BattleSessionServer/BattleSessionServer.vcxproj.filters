@@ -36,6 +36,9 @@
     <ClCompile Include="FighterSubStub.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="BattleDB.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FighterContents.h">
@@ -57,6 +60,9 @@
       <Filter>RPC</Filter>
     </ClInclude>
     <ClInclude Include="FighterSubStub.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="BattleDB.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
