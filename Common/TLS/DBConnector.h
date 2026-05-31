@@ -1,17 +1,53 @@
 #pragma once
 #include "C:/Program Files/MySQL/MySQL Server 8.0/include/mysql.h"
+#include "Logger.h"
 
 class DBConnector
 {
 public:
 	DBConnector(const char* txtname);
 	~DBConnector();
+	
 	bool Connect();
 	void Disconnect();
-	bool QuerySave( const WCHAR* String, ...);
-	bool QuerySelect(const WCHAR* String, ...);
+
+	bool BeginTransaction();
+	bool Commit();
+	bool Rollback();
+
+	template <typename... Args>
+	bool QuerySave(const WCHAR* String, Args&&... args)
+	{
+		WCHAR wquery[4096];
+		HRESULT result = StringCchPrintfW(wquery, _countof(wquery), String, args...);
+		if (FAILED(result))
+		{
+			LOG(L"Database", LVSYSTEM, L"QuerySave format error");
+			return false;
+		}
+
+		return ExecuteSaveQuery(wquery);
+	}
+	template <typename... Args>
+	bool QuerySelect(const WCHAR* String, Args&&... args)
+	{
+		WCHAR wquery[4096];
+		HRESULT result = StringCchPrintfW(wquery, _countof(wquery), String, args...);
+		if (FAILED(result))
+		{
+			LOG(L"Database", LVSYSTEM, L"QuerySelect format error");
+			return false;
+		}
+
+		return ExecuteSelectQuery(wquery);
+	}
+	void GetQueryResult(MYSQL_RES** result);
+
 private:
+	bool ExecuteSaveQuery(const WCHAR* wquery);
+	bool ExecuteSelectQuery(const WCHAR* wquery);
 	void Parsing(const char* txtname);
+
 private:
 	MYSQL _conn;
 	MYSQL* _connection;
@@ -25,7 +61,7 @@ private:
 	char _passwd[64];
 	char _db[64];
 	unsigned int _port;
-	ULONGLONG _limitTime;
+	unsigned int _limitTime;
 
 };
 
@@ -43,13 +79,45 @@ private:
 public:
 	TLSDBConnector(const char* txtname);
 	~TLSDBConnector();
+
 	bool Connect();
 	void Disconnect();
-	bool QuerySave(const WCHAR* String, ...);
-	bool QuerySelect(const WCHAR* String, ...);
+
+	bool BeginTransaction();
+	bool Commit();
+	bool Rollback();
+	
+	template <typename... Args>
+	bool QuerySave(const WCHAR* String, Args&&... args)
+	{
+		WCHAR wquery[4096];
+		HRESULT result = StringCchPrintfW(wquery, _countof(wquery), String, args...);
+		if (FAILED(result))
+		{
+			LOG(L"Database", LVSYSTEM, L"QuerySave format error");
+			return false;
+		}
+
+		return ExecuteSaveQuery(wquery);
+	}
+	template <typename... Args>
+	bool QuerySelect(const WCHAR* String, Args&&... args)
+	{
+		WCHAR wquery[4096];
+		HRESULT result = StringCchPrintfW(wquery, _countof(wquery), String, args...);
+		if (FAILED(result))
+		{
+			LOG(L"Database", LVSYSTEM, L"QuerySelect format error");
+			return false;
+		}
+
+		return ExecuteSelectQuery(wquery);
+	}
 	void GetQueryResult(MYSQL_RES** result);
 
 private:
+	bool ExecuteSaveQuery(const WCHAR* wquery);
+	bool ExecuteSelectQuery(const WCHAR* wquery);
 	void Parsing(const char* txtname);
 
 private:
@@ -60,5 +128,5 @@ private:
 	char _passwd[64];
 	char _db[64];
 	unsigned int _port;
-	ULONGLONG _limitTime;
+	unsigned int _limitTime;
 };

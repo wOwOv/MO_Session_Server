@@ -1,0 +1,9 @@
+DB_INFO
+{
+host:127.0.0.1
+user:root
+passwd:ditto1234
+db:mo_battle
+port:2170
+limitTime:50
+}
