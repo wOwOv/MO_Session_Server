@@ -40,8 +40,13 @@ void DBConnector::Disconnect()
 }
 
 bool DBConnector::QuerySave(const WCHAR* String, ...)
+void DBConnector::GetQueryResult(MYSQL_RES** result)
 {
-	WCHAR wquery[4096];
+	*result = _sqlResult;
+}
+
+bool DBConnector::ExecuteSaveQuery(const WCHAR* wquery)
+{
 	char cquery[4096];
 
 	va_list va;
@@ -75,7 +80,7 @@ bool DBConnector::QuerySave(const WCHAR* String, ...)
 	return true;
 }
 
-bool DBConnector::QuerySelect(const WCHAR* String, ...)
+bool DBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 {
 	WCHAR wquery[4096];
 	char cquery[4096];
@@ -98,7 +103,7 @@ bool DBConnector::QuerySelect(const WCHAR* String, ...)
 
 	if (time >= _limitTime)
 	{
-		LOG(L"Database", LVSYSTEM, L"Mysql query time : %d / query : %s", time,wquery);
+		LOG(L"Database", LVSYSTEM, L"Mysql query time : %d / query : %s", time, wquery);
 	}
 
 	_sqlResult = mysql_store_result(_connection);
@@ -165,6 +170,7 @@ void TLSDBConnector::Disconnect()
 }
 
 bool TLSDBConnector::QuerySave(const WCHAR* String, ...)
+bool TLSDBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 {
 	SQLDATA* sqldata = (SQLDATA*)TlsGetValue(_tlsIndex);
 	if (sqldata == nullptr)
@@ -173,7 +179,7 @@ bool TLSDBConnector::QuerySave(const WCHAR* String, ...)
 
 		mysql_init(&sqldata->_conn);
 
-		sqldata->_connection = mysql_real_connect(& sqldata->_conn, _host, _user, _passwd, _db, _port, (char*)NULL, 0);
+		sqldata->_connection = mysql_real_connect(&sqldata->_conn, _host, _user, _passwd, _db, _port, (char*)NULL, 0);
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
@@ -218,7 +224,7 @@ bool TLSDBConnector::QuerySave(const WCHAR* String, ...)
 	return true;
 }
 
-bool TLSDBConnector::QuerySelect(const WCHAR* String, ...)
+bool TLSDBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 {
 	SQLDATA* sqldata = (SQLDATA*)TlsGetValue(_tlsIndex);
 	if (sqldata == nullptr)
