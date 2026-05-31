@@ -1,0 +1,17 @@
+#pragma once
+
+
+#define SCCREATEME 0
+#define SCCREATEOTHER 1
+#define SCDELETE 2
+#define CSMOVESTART 10
+#define SCMOVESTART 11
+#define CSMOVESTOP 12
+#define SCMOVESTOP 13
+#define CSATTACK1 20
+#define SCATTACK1 21
+#define CSATTACK2 22
+#define SCATTACK2 23
+#define CSATTACK3 24
+#define SCATTACK3 25
+#define SCDAMAGE 30

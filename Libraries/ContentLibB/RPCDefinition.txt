@@ -1,0 +1,10 @@
+#Fighter#
+<Fight>
+{
+SC SCCreateMe(unsigned int id,unsigned char dir,unsigned short x,unsigned short y,unsigned char hp); #0
+SC SCCreateOther(unsigned int id, unsigned char dir, unsigned short x, unsigned short y, unsigned char hp); #1
+}
+
+<Match>
+{
+}

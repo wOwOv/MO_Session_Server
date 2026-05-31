@@ -1,0 +1,22 @@
+﻿ContentsServer
+{
+IP : 0.0.0.0                        
+Port : 5000
+WorkerThreadCreate : 4                              
+Concurrent : 4
+Nagle : 1
+MaxUser : 20000
+SetTimeOut : 0
+InitialTimeOut : 0
+RegularTimeOut : 0
+}
+
+IP: 바인드할 ip
+Port: 바인드할 포트
+WorkerThreadCreate: 생성할 워커스레드 수
+WorkerThreadRunning: concurrentthreads수 정할 때 논리프로세서에서 뺄 수
+Nagle: 0-끄기 1-켜기
+MaxUser: 최대 접속자 수
+SetTimeout: 0-타임아웃 기능 끄기 1-켜기
+InitialTimeOut: 초단위 로그인 전 세션에 대한 타임아웃 기준 시간&확인하는 주기, timeout기능 미사용시 0으로 둘 것
+RegularTimeout: 초단위 로그인 후 세션에 대한 타임아웃 기준 시간&확인하는 주기, timeout기능 미사용시 0으로 둘 것

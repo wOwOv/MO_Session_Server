@@ -1,0 +1,22 @@
+#Fighter#
+<Fight>
+{
+SC SCCreateMe(unsigned int id,unsigned char dir,unsigned short x,unsigned short y,unsigned char hp); #0
+SC SCCreateOther(unsigned int id, unsigned char dir, unsigned short x, unsigned short y, unsigned char hp); #1
+SC SCDelete(unsigned int id); #2
+CS CSMoveStart(unsigned char dir, unsigned short x, unsigned short y); #10
+SC SCMoveStart(unsigned int id, unsigned char dir, unsigned short x, unsigned short y); #11
+CS CSMoveStop(unsigned char dir, unsigned short x, unsigned short y); #12
+SC SCMoveStop(unsigned int id, unsigned char dir, unsigned short x, unsigned short y); #13
+CS CSAttack1(unsigned char dir, unsigned short x, unsigned short y); #20
+SC SCAttack1(unsigned int id, unsigned char dir, unsigned short x, unsigned short y); #21
+CS CSAttack2(unsigned char dir, unsigned short x, unsigned short y); #22
+SC SCAttack2(unsigned int id, unsigned char dir, unsigned short x, unsigned short y); #23
+CS CSAttack3(unsigned char dir, unsigned short x, unsigned short y); #24
+SC SCAttack3(unsigned int id, unsigned char dir, unsigned short x, unsigned short y); #25
+SC SCDamage(unsigned int atk,unsigned int tgt,unsigned char hp); #30
+}
+
+<Match>
+{
+}
