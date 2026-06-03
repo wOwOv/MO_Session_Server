@@ -1,11 +1,15 @@
 #include "FighterServer.h"
 #include "FighterStructure.h"
+#include "DBConnector.h"
+#include "BattleDB.h"
 #include <thread>
 
 
 FighterServer::FighterServer() :ContentsServer(LANSERVER)
 {
 	_CtrlThread = std::thread(CtrlThread, this);
+	_dbThreadRun = true;
+	_DBThread = std::thread(DBThread, this);
 	MatchContents* match = new MatchContents;
 	RegisterContents(MATCH, match);
 	SetDefaultContents(MATCH);
@@ -156,4 +160,54 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â ¹«Á¶
 			server->_controlPool.Free(control);
 		}
 	}
+}
+
+unsigned __stdcall FighterServer::DBThread(LPVOID arg)
+{
+	DBConnector db("DBInfo.txt");
+	db.Connect();
+	BattleDB battleDB(db);
+	FighterServer* server = (FighterServer*)arg;
+	while (1)
+	{
+		DBRequest request;
+		{
+			std::unique_lock<std::mutex> lock(server->_dbMtx);
+			server->_dbCv.wait(lock);
+			server->_dbCv.wait(lock, [server]()
+				{
+					return !server->_dbQ.empty() || !server->_dbThreadRun;
+				});
+			if (!server->_dbThreadRun && server->_dbQ.empty())
+			{
+				break;
+			}
+
+			request = server->_dbQ.front();
+			server->_dbQ.pop();
+		}
+		switch (request._type)
+		{
+		case DBRequestType::SaveBattleResult:
+		{
+			battleDB.SaveBattleResult(request._battleResult);
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+
+	}
+}
+
+void FighterServer::PushDBRequest(const DBRequest& request)
+{
+	{
+		std::lock_guard<std::mutex> lock(_dbMtx);
+		_dbQ.push(request);
+	}
+
+	_dbCv.notify_one();
 }

@@ -96,6 +96,17 @@ struct BattleResult
 	__int64 _blue[3];
 };
 
+enum class DBRequestType
+{
+	SaveBattleResult
+};
+
+struct DBRequest
+{
+	DBRequestType _type;
+	BattleResult _battleResult;
+};
+
 class ReadLock
 {
 public:

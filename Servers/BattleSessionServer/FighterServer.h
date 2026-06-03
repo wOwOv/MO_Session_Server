@@ -9,6 +9,7 @@
 #include "MemoryPool.h"
 #include "LockFreeQueue(CAS).h"
 #include "FighterContents.h"
+#include <queue>
 
 class FighterServer:public ContentsServer
 {
@@ -39,6 +40,11 @@ public:
 
 private:
 	static unsigned __stdcall CtrlThread(LPVOID arg);
+	static unsigned __stdcall DBThread(LPVOID arg);
+
+private:
+	void PushDBRequest(const DBRequest& request);
+
 private:
 	struct SockAddrInHash {
 		std::size_t operator()(const SOCKADDR_IN& addr) const {
@@ -54,11 +60,20 @@ private:
 	};
 
 private:
+	//제어스레드
 	std::thread _CtrlThread;
 	LFQueue<Control*> _ctrlQ;
 	std::condition_variable _ctrlCv;
 	std::mutex _ctrlMtx;
 	MemoryPool<FightContents> _fightPool;
+
+	//DB저장스레드
+	std::thread _DBThread;
+	std::queue<DBRequest> _dbQ;
+	std::condition_variable _dbCv;
+	std::mutex _dbMtx;
+	bool _dbThreadRun;
+
 
 	std::unordered_set<SOCKADDR_IN, SockAddrInHash, SockAddrInEqual> _banSet;
 	std::shared_mutex _banMutex;
