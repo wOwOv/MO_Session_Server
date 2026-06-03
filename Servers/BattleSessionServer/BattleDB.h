@@ -8,6 +8,7 @@ class BattleDB
 {
 public:
 	explicit BattleDB(DBConnector& db);
+	bool SaveBattleResult(const BattleResult& result);
 
 private:
 	bool InsertBattleHistory(const BattleResult& result);

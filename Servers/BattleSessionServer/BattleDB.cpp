@@ -55,6 +55,59 @@ namespace
 BattleDB::BattleDB(DBConnector& db):_db(db)
 {}
 
+bool BattleDB::SaveBattleResult(const BattleResult & result)
+{
+	if (!_db.BeginTransaction())
+	{
+		LOG(L"Database", LVSYSTEM,
+			L"SaveBattleResult Begin failed. match_id=%llu",
+			result._matchID);
+		return false;
+	}
+
+	if (!InsertBattleHistory(result))
+	{
+		_db.Rollback();
+		LOG(L"Database", LVSYSTEM,
+			L"SaveBattleResult battle_history insert failed. match_id=%llu",
+			result._matchID);
+		return false;
+	}
+
+	if (!InsertPlayerBattleRecords(result))
+	{
+		_db.Rollback();
+		LOG(L"Database", LVSYSTEM,
+			L"SaveBattleResult player_battle_record insert failed. match_id=%llu",
+			result._matchID);
+		return false;
+	}
+
+	if (!UpsertPlayerBattleStats(result))
+	{
+		_db.Rollback();
+		LOG(L"Database", LVSYSTEM,
+			L"SaveBattleResult player_battle_stat upsert failed. match_id=%llu",
+			result._matchID);
+		return false;
+	}
+
+	if (!_db.Commit())
+	{
+		_db.Rollback();
+		LOG(L"Database", LVSYSTEM,
+			L"SaveBattleResult Commit failed. match_id=%llu",
+			result._matchID);
+		return false;
+	}
+
+	LOG(L"Database", LVSYSTEM,
+		L"SaveBattleResult success. match_id=%llu",
+		result._matchID);
+
+	return true;
+}
+
 bool BattleDB::InsertBattleHistory(const BattleResult& result)
 {
 	return _db.QuerySave(
