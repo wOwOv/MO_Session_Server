@@ -328,9 +328,15 @@ void FightContents::OnUpdate()
 		}
 	}
 }
+void FightContents::Init(__int64 matchID)
+{
+	_matchID = matchID;
+}
+
 void FightContents::Clear()
 {
 	_playerMap.clear();
+	_matchID = 0;
 	_matched = 0;
 	_redCount = 0;
 	_blueCount = 0;

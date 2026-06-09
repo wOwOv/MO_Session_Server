@@ -135,6 +135,7 @@
     <ClCompile Include="FighterServer.cpp" />
     <ClCompile Include="FighterSubStub.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MatchIDGenerator.cpp" />
     <ClCompile Include="RPC_Fighter\FighterProxy.cpp" />
     <ClCompile Include="RPC_Fighter\FighterStub.cpp" />
   </ItemGroup>
@@ -144,6 +145,7 @@
     <ClInclude Include="FighterServer.h" />
     <ClInclude Include="FighterStructure.h" />
     <ClInclude Include="FighterSubStub.h" />
+    <ClInclude Include="MatchIDGenerator.h" />
     <ClInclude Include="RPC_Fighter\FighterDefine.h" />
     <ClInclude Include="RPC_Fighter\FighterProxy.h" />
     <ClInclude Include="RPC_Fighter\FighterStub.h" />

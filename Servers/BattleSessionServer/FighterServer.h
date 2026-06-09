@@ -10,6 +10,7 @@
 #include "LockFreeQueue(CAS).h"
 #include "FighterContents.h"
 #include <queue>
+#include "MatchIDGenerator.h"
 
 class FighterServer:public ContentsServer
 {
@@ -34,7 +35,8 @@ public:
 	int GetPlayerPoolUsingCount();
 	int GetControlPoolCapacity();
 	int GetControlPoolUsingCount();
-
+	
+	__int64 CreateMatchID();
 
 	std::shared_mutex& GetPlayerLock();
 
@@ -66,6 +68,8 @@ private:
 	std::condition_variable _ctrlCv;
 	std::mutex _ctrlMtx;
 	MemoryPool<FightContents> _fightPool;
+
+	MatchIDGenerator _matchIDGenerator;
 
 	//DB저장스레드
 	std::thread _DBThread;

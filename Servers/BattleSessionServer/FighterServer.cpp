@@ -5,7 +5,7 @@
 #include <thread>
 
 
-FighterServer::FighterServer() :ContentsServer(LANSERVER)
+FighterServer::FighterServer() :ContentsServer(LANSERVER),_matchIDGenerator(0)
 {
 	_CtrlThread = std::thread(CtrlThread, this);
 	_dbThreadRun = true;
@@ -102,6 +102,11 @@ int FighterServer::GetControlPoolUsingCount()
 	return _controlPool.GetUsingCount();
 }
 
+__int64 FighterServer::CreateMatchID()
+{
+	return _matchIDGenerator.Create();
+}
+
 
 std::shared_mutex& FighterServer::GetPlayerLock()
 {
@@ -129,7 +134,8 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 무조
 			if (control->_type == 1)				//할당
 			{
 				FightContents* contents = server->_fightPool.Alloc();
-				((FightContents*)contents)->Clear();
+				contents->Clear();
+				contents->Init(server->CreateMatchID());
 				contents->SetContentsNum(cnum);
 
 				server->RegisterContents(cnum, contents);
@@ -173,7 +179,6 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 		DBRequest request;
 		{
 			std::unique_lock<std::mutex> lock(server->_dbMtx);
-			server->_dbCv.wait(lock);
 			server->_dbCv.wait(lock, [server]()
 				{
 					return !server->_dbQ.empty() || !server->_dbThreadRun;
