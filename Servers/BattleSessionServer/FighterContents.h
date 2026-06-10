@@ -34,10 +34,13 @@ public:
 
 private:
 	std::unordered_map<SessionID, Player* > _playerMap;
+	SessionID _red[3];
+	SessionID _blue[3];
 	__int64 _matchID = 0;
 	__int32 _matched = 0;
 	__int32 _redCount = 0;
 	__int32 _blueCount = 0;
+	__int32 _winLoss = 0;		//0: none, 1: red win, 2: blue win
 	DWORD _oldTick;
 
 	bool _end = 1;//1이면 끄기 진행 전 0이면 끄기 진행 중

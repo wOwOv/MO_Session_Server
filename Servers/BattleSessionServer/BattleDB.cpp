@@ -119,8 +119,8 @@ bool BattleDB::InsertBattleHistory(const BattleResult& result)
 
 bool BattleDB::InsertPlayerBattleRecords(const BattleResult& result)
 {
-	const int redWin = result._winnerTeam == 0 ? 1 : 0;
-	const int blueWin = result._winnerTeam == 1 ? 1 : 0;
+	const int redWin = result._winnerTeam == 1 ? 1 : 0;
+	const int blueWin = result._winnerTeam == 2 ? 1 : 0;
 
 	return _db.QuerySave(
 		PLAYER_BATTLE_RECORD_SAVE_QUERY,
@@ -137,11 +137,11 @@ bool BattleDB::InsertPlayerBattleRecords(const BattleResult& result)
 
 bool BattleDB::UpsertPlayerBattleStats(const BattleResult& result)
 {
-	const int redWin = result._winnerTeam == 0 ? 1 : 0;
-	const int redLoss = result._winnerTeam == 0 ? 0 : 1;
+	const int redWin = result._winnerTeam == 1 ? 1 : 0;
+	const int redLoss = result._winnerTeam == 1 ? 0 : 1;
 
-	const int blueWin = result._winnerTeam == 1 ? 1 : 0;
-	const int blueLoss = result._winnerTeam == 1 ? 0 : 1;
+	const int blueWin = result._winnerTeam == 2 ? 1 : 0;
+	const int blueLoss = result._winnerTeam == 2 ? 0 : 1;
 
 	return _db.QuerySave(
 		PLAYER_BATTLE_STAT_SAVE_QUERY,

@@ -102,9 +102,33 @@ int FighterServer::GetControlPoolUsingCount()
 	return _controlPool.GetUsingCount();
 }
 
+void FighterServer::StopDBThread()
+{
+	{
+		std::lock_guard<std::mutex> lock(_dbMtx);
+		_dbThreadRun = false;
+	}
+
+	_dbCv.notify_all();
+
+	if (_DBThread.joinable())
+	{
+		_DBThread.join();
+	}
+}
+
 __int64 FighterServer::CreateMatchID()
 {
 	return _matchIDGenerator.Create();
+}
+
+void FighterServer::RequestSaveBattleResult(const BattleResult& result)
+{
+	DBRequest request;
+	request._type = DBRequestType::SaveBattleResult;
+	request._battleResult = result;
+
+	PushDBRequest(request);
 }
 
 
@@ -174,37 +198,38 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 	db.Connect();
 	BattleDB battleDB(db);
 	FighterServer* server = (FighterServer*)arg;
-	while (1)
+	while (true)
 	{
 		DBRequest request;
-		{
-			std::unique_lock<std::mutex> lock(server->_dbMtx);
-			server->_dbCv.wait(lock, [server]()
-				{
-					return !server->_dbQ.empty() || !server->_dbThreadRun;
-				});
-			if (!server->_dbThreadRun && server->_dbQ.empty())
-			{
-				break;
-			}
 
-			request = server->_dbQ.front();
-			server->_dbQ.pop();
+		if (!server->WaitAndPopDBRequest(request))
+		{
+			break;
 		}
+
 		switch (request._type)
 		{
 		case DBRequestType::SaveBattleResult:
 		{
-			battleDB.SaveBattleResult(request._battleResult);
+			if (!battleDB.SaveBattleResult(request._battleResult))
+			{
+				LOG(L"Database", LVSYSTEM,
+					L"Battle result DB save failed. match_id=%lld",
+					request._battleResult._matchID);
+			}
+
 			break;
-		}
-		default:
-		{
-			break;
-		}
 		}
 
+		default:
+		{
+			LOG(L"Database", LVSYSTEM,
+				L"Unknown DB request type.");
+			break;
+		}
+		}
 	}
+	return 1;
 }
 
 void FighterServer::PushDBRequest(const DBRequest& request)
@@ -215,4 +240,24 @@ void FighterServer::PushDBRequest(const DBRequest& request)
 	}
 
 	_dbCv.notify_one();
+}
+
+bool FighterServer::WaitAndPopDBRequest(DBRequest& outrequest)
+{
+	std::unique_lock<std::mutex> lock(_dbMtx);
+
+	_dbCv.wait(lock, [this]()
+		{
+			return !_dbQ.empty() || !_dbThreadRun;
+		});
+
+	if (!_dbThreadRun && _dbQ.empty())
+	{
+		return false;
+	}
+
+	outrequest = _dbQ.front();
+	_dbQ.pop();
+
+	return true;
 }

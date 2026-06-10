@@ -36,7 +36,11 @@ public:
 	int GetControlPoolCapacity();
 	int GetControlPoolUsingCount();
 	
+	void StopDBThread();
+
 	__int64 CreateMatchID();
+
+	void RequestSaveBattleResult(const BattleResult& result);
 
 	std::shared_mutex& GetPlayerLock();
 
@@ -46,6 +50,7 @@ private:
 
 private:
 	void PushDBRequest(const DBRequest& request);
+	bool WaitAndPopDBRequest(DBRequest& outrequest);
 
 private:
 	struct SockAddrInHash {
