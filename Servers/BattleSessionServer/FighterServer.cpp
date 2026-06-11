@@ -1,11 +1,15 @@
 #include "FighterServer.h"
 #include "FighterStructure.h"
+#include "DBConnector.h"
+#include "BattleDB.h"
 #include <thread>
 
 
-FighterServer::FighterServer() :ContentsServer(LANSERVER)
+FighterServer::FighterServer() :ContentsServer(LANSERVER),_matchIDGenerator(0)
 {
 	_CtrlThread = std::thread(CtrlThread, this);
+	_dbThreadRun = true;
+	_DBThread = std::thread(DBThread, this);
 	MatchContents* match = new MatchContents;
 	RegisterContents(MATCH, match);
 	SetDefaultContents(MATCH);
@@ -98,6 +102,35 @@ int FighterServer::GetControlPoolUsingCount()
 	return _controlPool.GetUsingCount();
 }
 
+void FighterServer::StopDBThread()
+{
+	{
+		std::lock_guard<std::mutex> lock(_dbMtx);
+		_dbThreadRun = false;
+	}
+
+	_dbCv.notify_all();
+
+	if (_DBThread.joinable())
+	{
+		_DBThread.join();
+	}
+}
+
+__int64 FighterServer::CreateMatchID()
+{
+	return _matchIDGenerator.Create();
+}
+
+void FighterServer::RequestSaveBattleResult(const BattleResult& result)
+{
+	DBRequest request;
+	request._type = DBRequestType::SaveBattleResult;
+	request._battleResult = result;
+
+	PushDBRequest(request);
+}
+
 
 std::shared_mutex& FighterServer::GetPlayerLock()
 {
@@ -125,7 +158,8 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 무조
 			if (control->_type == 1)				//할당
 			{
 				FightContents* contents = server->_fightPool.Alloc();
-				((FightContents*)contents)->Clear();
+				contents->Clear();
+				contents->Init(server->CreateMatchID());
 				contents->SetContentsNum(cnum);
 
 				server->RegisterContents(cnum, contents);
@@ -156,4 +190,74 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 무조
 			server->_controlPool.Free(control);
 		}
 	}
+}
+
+unsigned __stdcall FighterServer::DBThread(LPVOID arg)
+{
+	DBConnector db("DBInfo.txt");
+	db.Connect();
+	BattleDB battleDB(db);
+	FighterServer* server = (FighterServer*)arg;
+	while (true)
+	{
+		DBRequest request;
+
+		if (!server->WaitAndPopDBRequest(request))
+		{
+			break;
+		}
+
+		switch (request._type)
+		{
+		case DBRequestType::SaveBattleResult:
+		{
+			if (!battleDB.SaveBattleResult(request._battleResult))
+			{
+				LOG(L"Database", LVSYSTEM,
+					L"Battle result DB save failed. match_id=%lld",
+					request._battleResult._matchID);
+			}
+
+			break;
+		}
+
+		default:
+		{
+			LOG(L"Database", LVSYSTEM,
+				L"Unknown DB request type.");
+			break;
+		}
+		}
+	}
+	return 1;
+}
+
+void FighterServer::PushDBRequest(const DBRequest& request)
+{
+	{
+		std::lock_guard<std::mutex> lock(_dbMtx);
+		_dbQ.push(request);
+	}
+
+	_dbCv.notify_one();
+}
+
+bool FighterServer::WaitAndPopDBRequest(DBRequest& outrequest)
+{
+	std::unique_lock<std::mutex> lock(_dbMtx);
+
+	_dbCv.wait(lock, [this]()
+		{
+			return !_dbQ.empty() || !_dbThreadRun;
+		});
+
+	if (!_dbThreadRun && _dbQ.empty())
+	{
+		return false;
+	}
+
+	outrequest = _dbQ.front();
+	_dbQ.pop();
+
+	return true;
 }

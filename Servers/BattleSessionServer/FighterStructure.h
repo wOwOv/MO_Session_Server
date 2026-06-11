@@ -1,6 +1,8 @@
 #pragma once
-#include <winsock2.h>
+
 #include <shared_mutex>
+#include <winsock2.h>
+
 
 #define MATCH 1000000001				//contentsnum
 #define SessionID __int64
@@ -85,6 +87,26 @@ struct Control
 	Group _group;
 	void* _contents;
 };
+
+struct BattleResult
+{
+	__int64 _matchID;
+	char _winnerTeam;
+	__int64 _red[3];
+	__int64 _blue[3];
+};
+
+enum class DBRequestType
+{
+	SaveBattleResult
+};
+
+struct DBRequest
+{
+	DBRequestType _type;
+	BattleResult _battleResult;
+};
+
 class ReadLock
 {
 public:

@@ -9,6 +9,8 @@
 #include "MemoryPool.h"
 #include "LockFreeQueue(CAS).h"
 #include "FighterContents.h"
+#include <queue>
+#include "MatchIDGenerator.h"
 
 class FighterServer:public ContentsServer
 {
@@ -33,12 +35,23 @@ public:
 	int GetPlayerPoolUsingCount();
 	int GetControlPoolCapacity();
 	int GetControlPoolUsingCount();
+	
+	void StopDBThread();
 
+	__int64 CreateMatchID();
+
+	void RequestSaveBattleResult(const BattleResult& result);
 
 	std::shared_mutex& GetPlayerLock();
 
 private:
 	static unsigned __stdcall CtrlThread(LPVOID arg);
+	static unsigned __stdcall DBThread(LPVOID arg);
+
+private:
+	void PushDBRequest(const DBRequest& request);
+	bool WaitAndPopDBRequest(DBRequest& outrequest);
+
 private:
 	struct SockAddrInHash {
 		std::size_t operator()(const SOCKADDR_IN& addr) const {
@@ -54,11 +67,22 @@ private:
 	};
 
 private:
+	//제어스레드
 	std::thread _CtrlThread;
 	LFQueue<Control*> _ctrlQ;
 	std::condition_variable _ctrlCv;
 	std::mutex _ctrlMtx;
 	MemoryPool<FightContents> _fightPool;
+
+	MatchIDGenerator _matchIDGenerator;
+
+	//DB저장스레드
+	std::thread _DBThread;
+	std::queue<DBRequest> _dbQ;
+	std::condition_variable _dbCv;
+	std::mutex _dbMtx;
+	bool _dbThreadRun;
+
 
 	std::unordered_set<SOCKADDR_IN, SockAddrInHash, SockAddrInEqual> _banSet;
 	std::shared_mutex _banMutex;

@@ -127,7 +127,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common\redis;$(SolutionDir)Common\LockFree;$(SolutionDir)Common\TLS;$(SolutionDir)Common</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common\redis;$(SolutionDir)Common\LockFree;$(SolutionDir)Common\TLS;$(SolutionDir)Common;C:\Program Files\MySQL\MySQL Server 8.0\include</AdditionalIncludeDirectories>
       <LanguageStandard>Default</LanguageStandard>
     </ClCompile>
     <Link>

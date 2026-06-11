@@ -1,6 +1,7 @@
 #pragma once
-#include "C:/Program Files/MySQL/MySQL Server 8.0/include/mysql.h"
+#include <mysql.h>
 #include "Logger.h"
+#include <strsafe.h>
 
 class DBConnector
 {

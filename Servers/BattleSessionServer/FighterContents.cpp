@@ -124,6 +124,7 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 			tgt->_move = -1;
 			if (tgt->_team == 1)		//red
 			{
+				_red[redcnt] = tgt->_sessionID;
 				tgt->_x = REDX;
 				tgt->_y = dfRANGE_MOVE_TOP+40 + TEAMY * redcnt;
 				tgt->_direction = dfPACKET_MOVE_DIR_RR;
@@ -131,6 +132,7 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 			}
 			else	//blue
 			{
+				_blue[bluecnt] = tgt->_sessionID;
 				tgt->_x = BLUEX;
 				tgt->_y = dfRANGE_MOVE_TOP+40 + TEAMY * bluecnt;
 				tgt->_direction = dfPACKET_MOVE_DIR_LL;
@@ -207,7 +209,18 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 			Disconnect(tgt->_sessionID);
 		}
 
+		BattleResult result;
+		result._matchID = _matchID;
+		for (int i = 0; i < 3; i++) 
+		{
+			result._red[i] = _red[i];
+			result._blue[i] = _blue[i];
+		}
+		result._winnerTeam = _winLoss;
+
 		FighterServer* server = (FighterServer*)_mServer;
+		server->RequestSaveBattleResult(result);
+
 		Control* control = server->_controlPool.Alloc();
 		control->_type = 2;
 		control->_contents = this;
@@ -328,9 +341,15 @@ void FightContents::OnUpdate()
 		}
 	}
 }
+void FightContents::Init(__int64 matchID)
+{
+	_matchID = matchID;
+}
+
 void FightContents::Clear()
 {
 	_playerMap.clear();
+	_matchID = 0;
 	_matched = 0;
 	_redCount = 0;
 	_blueCount = 0;
@@ -340,8 +359,14 @@ void FightContents::Clear()
 }
 bool FightContents::CheckGameEnd()
 {
-	if (_redCount == 0 || _blueCount == 0)
+	if (_redCount == 0)
 	{
+		_winLoss = 1;
+		return true;
+	}
+	if(_blueCount == 0)
+	{
+		_winLoss = 2;
 		return true;
 	}
 	return false;
