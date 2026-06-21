@@ -11,13 +11,13 @@
 ContentsServer::ContentsServer(unsigned char type) : _type(type)
 {
 	timeBeginPeriod(1);
+	LOG(L"SYSTEM",LVSYSTEM,L"ContentsServer Created");
 
 }
 
 ContentsServer::~ContentsServer()
 {
 	delete _sessionArray;
-	delete _threadBox;
 	timeEndPeriod(1);
 }
 
@@ -29,49 +29,27 @@ bool ContentsServer::Start(const char* txtname, char code, char key)
 	Setting(code, key);
 	Network();
 
+	_coreState = CORE_RUNNING;
+	LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer Running");
 	return 1;
 }
 
 void ContentsServer::Stop()
 {
-	int scretval;//cleanup retval
-	int csretval;//closesocket retval
-
-	//accept스레드 리턴을 위한 closesocket
-	csretval = closesocket(_listenSock);
-	if (csretval == SOCKET_ERROR)
-	{
-		csretval = WSAGetLastError();
-		printf("closesocket error: %d\n", csretval);
-	}
-
-	//워커스레드 리턴을 위한 postqueue
-	ULONG_PTR p = 0;
-	LPOVERLAPPED po = nullptr;
-	for (int i = 0; i < _workerThread; i++)
-	{
-		PostQueuedCompletionStatus(_hcp, 0, p, po);
-	}
-
-	//monitorThread종료되길 대기->monitorthread는 accept스레드,워커스레드들 다 종료된 후 리턴하기에
-	if (_timeoutVal == 0)
-	{
-		WaitForSingleObject(_threadBox[_workerThread + 1], INFINITE);
-		printf("All thread ended!\n");
-	}
-	else
-	{
-		WaitForMultipleObjects(2, &_threadBox[_workerThread + 1], TRUE, INFINITE);
-		printf("All thread ended!\n");
-	}
+	_coreState = CORE_STOPPING;
+	StopAcceptThread();
+	StopWorkerThread();
+	StopTimeOutThread();
+	StopMonitorThread();
 
 	//윈속종료
-	scretval = WSACleanup();
+	int scretval = WSACleanup();
 	if (scretval == SOCKET_ERROR)
 	{
 		scretval = WSAGetLastError();
 		printf("cleanup error: %d\n", scretval);
 	}
+	_coreState = CORE_STOPPED;
 }
 
 
@@ -343,6 +321,90 @@ IProxy* ContentsServer::DetachProxy()
 	return ret;
 }
 
+void ContentsServer::StopAcceptThread()
+{
+	_coreState = CORE_STOPPING;
+	//listendsocket을 닫아서 Acceptthread리턴 유도
+	closesocket(_listenSock);
+	WaitForSingleObject(_acceptThread, INFINITE);
+	CloseHandle(_acceptThread);
+	_acceptThread = nullptr;
+	LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer Stop Accepting");
+	printf("ContentsServer Stop Accepting\n");
+	CheckAllCoreStopped();
+}
+
+void ContentsServer::StopTimeOutThread()
+{
+	//타임아웃스레드 생성시
+	if (_timeoutVal == 1)
+	{
+		_coreState = CORE_STOPPING;
+		_timeOutThreadStop = TRUE;
+		WaitForSingleObject(_timeOutThread, INFINITE);
+		CloseHandle(_timeOutThread);
+		_timeOutThread = nullptr;
+		LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer Stop TimeOut");
+		printf("ContentsServer Stop TimeOut\n");
+		CheckAllCoreStopped();
+	}
+}
+
+void ContentsServer::StopMonitorThread()
+{
+	_coreState = CORE_STOPPING;
+	_monitorThreadStop = TRUE;
+	WaitForSingleObject(_monitorThread, INFINITE);
+	CloseHandle(_monitorThread);
+	_monitorThread = nullptr;
+	LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer Stop Monitor");
+	printf("ContentsServer Stop Monitor\n");
+	CheckAllCoreStopped();
+}
+
+void ContentsServer::StopWorkerThread()
+{
+	_coreState = CORE_STOPPING;
+	//워커스레드 리턴을 위한 PQCS
+	ULONG_PTR p = 0;
+	LPOVERLAPPED po = nullptr;
+	for (int i = 0; i < _workerThread; i++)
+	{
+		PostQueuedCompletionStatus(_hcp, 0, p, po);
+	}
+	WaitForMultipleObjects(_workerThread, _workerThreads, TRUE, INFINITE);
+	for (int i = 0; i < _workerThread; i++)
+	{
+		CloseHandle(_workerThreads[i]);
+	}
+	_workerThreads = nullptr;
+	LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer Stop Worker");
+	printf("ContentsServer Stop Worker\n");
+	CheckAllCoreStopped();
+}
+
+void ContentsServer::CheckAllCoreStopped()
+{
+	if (_acceptThread != nullptr)
+	{
+		return;
+	}
+	if (_workerThreads != nullptr)
+	{
+		return;
+	}
+	if (_timeOutThread != nullptr)
+	{
+		return;
+	}
+	if (_monitorThread != nullptr)
+	{
+		return;
+	}
+	_coreState = CORE_STOPPED;
+	LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer All Core Stopped");
+}
+
 void ContentsServer::Parsing(const char* txtname)
 {
 	char ip[16];
@@ -408,52 +470,31 @@ int ContentsServer::Setting(char code, char key)
 
 
 	//_workerthread개의 작업자 스레드 생성
-	if (_timeoutVal == 0)
+	_workerThreads = new HANDLE[_workerThread];
+	for (int i = 0; i < _workerThread; i++)
 	{
-		_threadBox = new HANDLE[_workerThread + 2];
-		for (int i = 0; i < _workerThread; i++)
-		{
-			_threadBox[i] = (HANDLE)_beginthreadex(NULL, 0, &WorkerThread, this, 0, NULL);
-			if (_threadBox[i] == NULL)
-			{
-				return 1;
-			}
-		}
-
-		//MonitorThread생성
-		_threadBox[_workerThread + 1] = (HANDLE)_beginthreadex(NULL, 0, &MonitorThread, this, 0, NULL);
-		if (_threadBox[_workerThread + 1] == NULL)
+		_workerThreads[i] = (HANDLE)_beginthreadex(NULL, 0, &WorkerThread, this, 0, NULL);
+		if (_workerThreads[i] == NULL)
 		{
 			return 1;
 		}
-
 	}
-	else
+
+	//MonitorThread생성
+	_monitorThread = (HANDLE)_beginthreadex(NULL, 0, &MonitorThread, this, 0, NULL);
+	if (_monitorThread == NULL)
 	{
-		_threadBox = new HANDLE[_workerThread + 3];
-		for (int i = 0; i < _workerThread; i++)
-		{
-			_threadBox[i] = (HANDLE)_beginthreadex(NULL, 0, &WorkerThread, this, 0, NULL);
-			if (_threadBox[i] == NULL)
-			{
-				return 1;
-			}
-		}
+		return 1;
+	}
 
-		//MonitorThread생성
-		_threadBox[_workerThread + 1] = (HANDLE)_beginthreadex(NULL, 0, &MonitorThread, this, 0, NULL);
-		if (_threadBox[_workerThread + 1] == NULL)
-		{
-			return 1;
-		}
-
+	if (_timeoutVal == 1)
+	{
 		//TimeOutThread생성
-		_threadBox[_workerThread + 2] = (HANDLE)_beginthreadex(NULL, 0, &TimeOutThread, this, 0, NULL);
-		if (_threadBox[_workerThread + 2] == NULL)
+		_monitorThread = (HANDLE)_beginthreadex(NULL, 0, &TimeOutThread, this, 0, NULL);
+		if (_monitorThread == NULL)
 		{
 			return 1;
 		}
-
 	}
 
 	return 0;
@@ -543,7 +584,7 @@ int ContentsServer::Network()
 		return -1;
 	}
 
-	_threadBox[_workerThread] = (HANDLE)_beginthreadex(NULL, 0, &AcceptThread, this, 0, NULL);
+	_acceptThread = (HANDLE)_beginthreadex(NULL, 0, &AcceptThread, this, 0, NULL);
 
 
 
@@ -862,9 +903,7 @@ unsigned __stdcall ContentsServer::MonitorThread(LPVOID arg)
 
 	while (1)
 	{
-		//accpet스레드와 워커스레드들 종료되면 모니터스레드도 리턴하기
-		int waitret = WaitForMultipleObjects(coreserver->_workerThread + 1, coreserver->_threadBox, TRUE, 0);
-		if (waitret == WAIT_OBJECT_0)
+		if (coreserver->_monitorThreadStop)
 		{
 			return 0;
 		}
@@ -903,9 +942,7 @@ unsigned __stdcall ContentsServer::TimeOutThread(LPVOID arg)
 
 	while (1)
 	{
-		//accpet스레드와 워커스레드들 종료되면 Timeout스레드도 리턴하기
-		int waitret = WaitForMultipleObjects(coreserver->_workerThread + 1, coreserver->_threadBox, TRUE, 0);
-		if (waitret == WAIT_OBJECT_0)
+		if (coreserver->_timeOutThreadStop)
 		{
 			return 0;
 		}

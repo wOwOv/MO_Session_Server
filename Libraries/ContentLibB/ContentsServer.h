@@ -22,9 +22,18 @@ class Contents;
 
 class ContentsServer
 {
-	const long RELEASEFLAG = 0x80000000;
+	static constexpr long RELEASEFLAG = 0x80000000;
 
 private:
+	enum CoreServerState
+	{
+		CORE_CREATED = 0,  // Start 전
+		CORE_RUNNING = 1,  // Start 성공 후 동작 중
+		CORE_STOPPING = 2, // Stop 진행 중
+		CORE_STOPPED = 3   // 완전 종료
+	};
+
+
 #pragma pack(push,1)
 	struct LanHEADER
 	{
@@ -86,7 +95,7 @@ public:
 	virtual ~ContentsServer();
 
 	bool Start(const char* txtname, char code = 0, char key = 0);
-	void Stop();
+	virtual void Stop();
 	bool Disconnect(__int64 sessionID);
 	bool SendPacket(__int64 sessionID, CPacket packet);
 
@@ -113,6 +122,15 @@ public:
 	IStub* DetachStub();
 	void AttachProxy(IProxy* proxy);
 	IProxy* DetachProxy();
+
+protected:
+	void StopAcceptThread();
+	void StopTimeOutThread();
+	void StopMonitorThread();
+	void StopWorkerThread();
+
+private:
+	void CheckAllCoreStopped();
 
 protected:
 	virtual bool OnConnectionRequest(SOCKADDR_IN* clientaddr) = 0;
@@ -169,12 +187,18 @@ private:
 
 
 private:
+	long _coreState = CORE_CREATED;
 	SOCKET _listenSock;
 	HANDLE _hcp;
 	SESSION* _sessionArray;
 	DWORD _sessionCount;
-	HANDLE* _threadBox;
 
+	HANDLE _acceptThread;
+	HANDLE* _workerThreads;
+	HANDLE _timeOutThread;
+	HANDLE _monitorThread;
+	volatile LONG _timeOutThreadStop = FALSE;
+	volatile LONG _monitorThreadStop = FALSE;
 
 	unsigned char _code;
 	unsigned char _fixedKey;
