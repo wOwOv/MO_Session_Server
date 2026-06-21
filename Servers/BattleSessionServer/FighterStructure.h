@@ -81,6 +81,14 @@ struct Group
 	SessionID _red[3];
 	SessionID _blue[3];
 };
+
+enum CONTROLTYPE
+{
+	FIGHTALLOC = 1,
+	FIGHTFREE,
+	MATCHDEREGISTER
+};
+
 struct Control
 {
 	char _type;

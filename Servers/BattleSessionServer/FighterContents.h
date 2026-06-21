@@ -9,11 +9,18 @@ public:
 	MatchContents();
 	~MatchContents();
 
+	void StopMatch();
+
 	virtual void OnEnter(__int64 sessionID, void* extra) override;
 	virtual void OnLeave(__int64 sessionID, void* extra) override;
 	virtual void OnUpdate() override;
 
 private:
+	void DisconnectAllPlayer();
+	bool CheckStopRequested();
+
+private:
+	std::atomic<bool> _stopRequested = false;
 	std::unordered_map<SessionID, Player* > _playerMap;
 
 };

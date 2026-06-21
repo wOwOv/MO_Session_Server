@@ -10,14 +10,22 @@ FighterServer::FighterServer() :ContentsServer(LANSERVER),_matchIDGenerator(0)
 	_CtrlThread = std::thread(CtrlThread, this);
 	_dbThreadRun = true;
 	_DBThread = std::thread(DBThread, this);
-	MatchContents* match = new MatchContents;
-	RegisterContents(MATCH, match);
+	_matchContents = new MatchContents;
+	RegisterContents(MATCH, _matchContents);
 	SetDefaultContents(MATCH);
 }
 
 FighterServer::~FighterServer()
 {
 }
+
+void FighterServer::FighterServerStart(const char* txtname, char code, char key)
+{
+	Start(txtname, code, key);
+	_state = SERVER_RUNNING;
+	LOG(L"FighterServer", LVSYSTEM, L"FighterServer Started");
+}
+
 
 bool FighterServer::OnConnectionRequest(SOCKADDR_IN* clientaddr)
 {
@@ -102,19 +110,43 @@ int FighterServer::GetControlPoolUsingCount()
 	return _controlPool.GetUsingCount();
 }
 
+void FighterServer::RequestDeregisterMatchContents()
+{
+	_matchContents->StopMatch();
+}
+
+void FighterServer::StopControlThread()
+{
+	{
+		std::lock_guard<std::mutex> lock(_dbMtx);
+		_dbThreadRun.store(false);
+	}
+
+	_ctrlCv.notify_one();
+
+	if (_CtrlThread.joinable())
+	{
+		_CtrlThread.join();
+	}
+	_state.store(CONTROL_STOPPED);
+	LOG(L"FighterServer", LVSYSTEM, L"Control Thread Stopped");
+}
+
 void FighterServer::StopDBThread()
 {
 	{
 		std::lock_guard<std::mutex> lock(_dbMtx);
-		_dbThreadRun = false;
+		_dbThreadRun.store(false);
 	}
 
-	_dbCv.notify_all();
+	_dbCv.notify_one();
 
 	if (_DBThread.joinable())
 	{
 		_DBThread.join();
 	}
+	_state.store(DB_STOPPED);
+	LOG(L"FighterServer", LVSYSTEM, L"DB Thread Stopped");
 }
 
 __int64 FighterServer::CreateMatchID()
@@ -137,11 +169,12 @@ std::shared_mutex& FighterServer::GetPlayerLock()
 	return _playerMutex;
 }
 
-unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 무조건 애가 생성하고 삭제함
+unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 CtrlThread가 생성하고 삭제함
 {
 	__int32 cnum = 1;//1~1000000000까지 부여가능
 
 	FighterServer* server = (FighterServer*)arg;
+	server->_ctrlThreadRun.store(true);
 	while (1)
 	{
 		std::unique_lock<std::mutex> lock(server->_ctrlMtx);
@@ -153,9 +186,15 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 무조
 			bool check = server->_ctrlQ.Dequeue(&control);
 			if (check == false)
 			{
+				if (server->_ctrlThreadRun.load() == false)
+				{
+					return 0;
+				}
 				break;
 			}
-			if (control->_type == 1)				//할당
+			switch (control->_type)
+			{
+			case CONTROLTYPE::FIGHTALLOC:
 			{
 				FightContents* contents = server->_fightPool.Alloc();
 				contents->Clear();
@@ -178,20 +217,31 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 무조
 				{
 					++cnum;
 				}
+				break;
 			}
-			if (control->_type == 2)				//삭제
+			case CONTROLTYPE::FIGHTFREE:
 			{
-				//FightContents반환하고 유저들도 다시 옮겨야함
-				server->DeregisterContents(((FightContents*)control->_contents)->GetContentsNum());
-				server->_fightPool.Free((FightContents*)control->_contents);
+				FightContents* fight = (FightContents*)control->_contents;
+				server->DeregisterContents(fight->GetContentsNum());
+				server->_fightPool.Free(fight);
+				break;
 			}
-
-
+			case CONTROLTYPE::MATCHDEREGISTER:
+			{
+				server->DeregisterContents(MATCH);
+				server->_state.store(MATCH_DEREGISTERED);
+				LOG(L"FighterServer", LVSYSTEM, L"Match Contents Deregistered");
+				break;
+			}
+			default:
+			{
+				break;
+			}
+			}
 			server->_controlPool.Free(control);
 		}
 	}
 }
-
 unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 {
 	DBConnector db("DBInfo.txt");
