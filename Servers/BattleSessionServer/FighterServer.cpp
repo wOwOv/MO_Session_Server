@@ -7,8 +7,9 @@
 
 FighterServer::FighterServer() :ContentsServer(LANSERVER),_matchIDGenerator(0)
 {
+	_ctrlThreadRun.store(true);
 	_CtrlThread = std::thread(CtrlThread, this);
-	_dbThreadRun = true;
+	_dbThreadRun.store(true);
 	_DBThread = std::thread(DBThread, this);
 	_matchContents = new MatchContents;
 	RegisterContents(MATCH, _matchContents);
@@ -174,7 +175,6 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 Ctrl
 	__int32 cnum = 1;//1~1000000000까지 부여가능
 
 	FighterServer* server = (FighterServer*)arg;
-	server->_ctrlThreadRun.store(true);
 	while (1)
 	{
 		std::unique_lock<std::mutex> lock(server->_ctrlMtx);
@@ -186,7 +186,7 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 Ctrl
 			bool check = server->_ctrlQ.Dequeue(&control);
 			if (check == false)
 			{
-				if (server->_ctrlThreadRun.load() == false)
+				if (server->_fightPool.GetUseCount()==0&&server->_ctrlThreadRun.load() == false&&server->_state.load()==MATCH_DEREGISTERED)
 				{
 					return 0;
 				}

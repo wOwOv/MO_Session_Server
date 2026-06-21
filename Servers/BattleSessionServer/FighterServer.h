@@ -31,6 +31,9 @@ public:
 	~FighterServer();
 
 	void FighterServerStart(const char* txtname, char code = 0, char key = 0);
+	void RequestDeregisterMatchContents();
+	void StopControlThread();
+	void StopDBThread();
 
 	virtual bool OnConnectionRequest(SOCKADDR_IN* clientaddr) override;
 	virtual void OnAccept(SOCKADDR_IN* clientaddr, __int64 sessionID) override;
@@ -46,10 +49,6 @@ public:
 	int GetPlayerPoolUsingCount();
 	int GetControlPoolCapacity();
 	int GetControlPoolUsingCount();
-	
-	void RequestDeregisterMatchContents();
-	void StopControlThread();
-	void StopDBThread();
 
 	__int64 CreateMatchID();
 
