@@ -98,6 +98,7 @@ public:
 	virtual void Stop();
 	bool Disconnect(__int64 sessionID);
 	bool SendPacket(__int64 sessionID, CPacket packet);
+	void PostQueueContentsShutDown(__int32 contentsnum);
 
 	int GetSessionCount();
 	unsigned long long GetAcceptTotal();

@@ -150,6 +150,11 @@ bool ContentsServer::SendPacket(__int64 sessionID, CPacket packet) {
 	return true;
 }
 
+void ContentsServer::PostQueueContentsShutDown(__int32 contentsnum)
+{
+	PostQueuedCompletionStatus(_hcp, contentsnum, NULL, (LPOVERLAPPED)104);
+}
+
 
 int ContentsServer::GetSessionCount()
 {
@@ -706,6 +711,25 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 			continue;
 		}
 
+		//OnShutDown
+		if (gqcsretval != 0 && (long long)myoverlapped == 104)
+		{
+			AcquireSRWLockShared(&server->_mapKey);
+
+			std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
+			if (tgtc != server->_contentsMap.end())
+			{
+				Contents* contents = tgtc->second;
+				AcquireSRWLockExclusive(&contents->_contentsKey);
+				contents->OnShutDown();
+				contents->_logicCount++;
+				ReleaseSRWLockExclusive(&contents->_contentsKey);
+			}
+
+			ReleaseSRWLockShared(&server->_mapKey);
+
+			continue;
+		}
 
 		//비동기 입츌력 실패
 		if (gqcsretval == 0 || cbTransferred == 0)
