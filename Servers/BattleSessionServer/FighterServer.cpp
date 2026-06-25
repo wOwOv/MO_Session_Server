@@ -27,6 +27,32 @@ void FighterServer::FighterServerStart(const char* txtname, char code, char key)
 	LOG(L"FighterServer", LVSYSTEM, L"FighterServer Started");
 }
 
+void FighterServer::Stop()
+{
+	//1.라이브러리 측 Accept중지
+	StopAcceptThread();
+	_state.store(ACCEPT_STOPPED);
+	printf("Accept Thread Stopped\n");
+	//2. MatchContetns Deregister
+	RequestStopMatchContents();
+	while (_state < MATCH_DEREGISTERED)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+	printf("MatchContents Deregistered\n");
+	//3. Control Thread 중지
+	StopControlThread();
+	printf("Control Thread Stopped\n");
+	//4. Worker Thread 중지
+	StopWorkerThread();
+	printf("Worker Thread Stopped\n");
+	//5. DB Thread 중지
+	StopDBThread();
+	printf("DB Thread Stopped\n");
+	StopMonitorThread();
+	printf("Monitor Thread Stopped\n");
+}
+
 
 bool FighterServer::OnConnectionRequest(SOCKADDR_IN* clientaddr)
 {
@@ -111,16 +137,71 @@ int FighterServer::GetControlPoolUsingCount()
 	return _controlPool.GetUsingCount();
 }
 
-void FighterServer::RequestDeregisterMatchContents()
+void FighterServer::ShowServerInfo()
 {
-	_matchContents->StopMatch();
+	ContentsServer::ShowServerInfo();
+
+	switch (_state)
+	{
+	case SERVER_CREATED:
+	{
+		printf("Server State : SERVER_CREATED\n");
+		break;
+	}
+	case SERVER_RUNNING:
+	{
+		printf("Server State : SERVER_RUNNING\n");
+		break;
+	}
+	case ACCEPT_STOPPED:
+	{
+		printf("Server State : ACCEPT_STOPPED\n");
+		break;
+	}
+	case MATCH_DEREGISTERED:
+	{
+		printf("Server State : MATCH_DEREGISTERED\n");
+		break;
+	}
+	case CONTROL_STOPPED:
+	{
+		printf("Server State : CONTROL_STOPPED\n");
+		break;
+	}
+	case DB_STOPPED:
+	{
+		printf("Server State : DB_STOPPED\n");
+		break;
+	}
+	}
+
+	printf("FightResourceCapacity: %d\nFightResourceUsing: %d\nPlayerPoolCapacity: %d\nPlayerPoolUsing: %d\nControlPoolCapacity: %d\nControlPoolUsing: %d\nPlayer: %d",
+		GetFightPoolCapacity(),GetFightPoolUsingCount(),GetPlayerPoolCapacity(),GetPlayerPoolUsingCount(),GetControlPoolCapacity(),GetControlPoolUsingCount(),GetPlayerCount());
+}
+
+void FighterServer::OtherServerControl(int controlKey)
+{
+	if (controlKey == 'B' || controlKey == 'b')
+	{
+		_shutDown = true;
+	}
+}
+
+bool FighterServer::IsShutDownRequested()
+{
+	return _shutDown;
+}
+
+void FighterServer::RequestStopMatchContents()
+{
+	PostQueueContentsShutDown(MATCH);
 }
 
 void FighterServer::StopControlThread()
 {
 	{
 		std::lock_guard<std::mutex> lock(_dbMtx);
-		_dbThreadRun.store(false);
+		_ctrlThreadRun.store(false);
 	}
 
 	_ctrlCv.notify_one();
@@ -188,6 +269,8 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 Ctrl
 			{
 				if (server->_fightPool.GetUseCount()==0&&server->_ctrlThreadRun.load() == false&&server->_state.load()==MATCH_DEREGISTERED)
 				{
+					server->_state.store(CONTROL_STOPPED);
+					LOG(L"FighterServer", LVSYSTEM, L"Control Thread Stopped");
 					return 0;
 				}
 				break;
@@ -254,6 +337,12 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 
 		if (!server->WaitAndPopDBRequest(request))
 		{
+			if (server->_dbThreadRun.load() == false && server->_state.load() == CONTROL_STOPPED)
+			{
+				server->_state.store(DB_STOPPED);
+				LOG(L"FIghterServer", LVSYSTEM, L"DB Thread Stopped");
+				return 0;
+			}
 			break;
 		}
 

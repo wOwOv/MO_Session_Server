@@ -17,12 +17,6 @@ MatchContents::~MatchContents()
 	delete stub;
 }
 
-void MatchContents::StopMatch()
-{
-	_stopRequested.store(true);
-	DisconnectAllPlayer();
-}
-
 void MatchContents::DisconnectAllPlayer()
 {
 	for (auto& iter : _playerMap)
@@ -30,12 +24,29 @@ void MatchContents::DisconnectAllPlayer()
 		Player* player = iter.second;
 		_mServer->Disconnect(player->_sessionID);
 	}
+	if (_playerMap.empty())
+	{
+		if (CheckStopRequested())
+		{
+			FighterServer* server = (FighterServer*)_mServer;
+			Control* control = server->_controlPool.Alloc();
+			control->_type = CONTROLTYPE::MATCHDEREGISTER;
+			server->_ctrlQ.Enqueue(control);
+			server->_ctrlCv.notify_one();
+		}
+	}
 }
 
 
 
 void MatchContents::OnEnter(__int64 sessionID, void* extra)
 {
+	if (_stopRequested.load()==true)
+	{
+		_mServer->Disconnect(sessionID);
+		return;
+	}
+
 	FighterServer* server = (FighterServer*)_mServer;
 	ReadLock lock(server->_playerMutex);
 	Player* player;
@@ -92,6 +103,12 @@ void MatchContents::OnLeave(__int64 sessionID, void* extra)
 
 void MatchContents::OnUpdate()
 {
+}
+
+void MatchContents::OnShutDown()
+{
+	_stopRequested.store(true);
+	DisconnectAllPlayer();
 }
 
 bool MatchContents::CheckStopRequested()
@@ -375,6 +392,10 @@ void FightContents::OnUpdate()
 		}
 	}
 }
+
+void FightContents::OnShutDown()
+{}
+
 void FightContents::Init(__int64 matchID)
 {
 	_matchID = matchID;

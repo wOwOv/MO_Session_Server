@@ -7,6 +7,7 @@
 #include <ws2tcpip.h>
 #include "Parser.h"
 #include "Logger.h"
+#include <conio.h>
 
 ContentsServer::ContentsServer(unsigned char type) : _type(type)
 {
@@ -19,6 +20,82 @@ ContentsServer::~ContentsServer()
 {
 	delete _sessionArray;
 	timeEndPeriod(1);
+}
+
+void ContentsServer::ServerControl()
+{
+	static bool controlMode = false;
+	//L:컨트롤 Lock, U:컨트롤 Unlock, S:서버상태확인, Q:종료
+
+	if (_kbhit())
+	{
+		int controlKey = _getch();
+
+		//키보드 제어 허용
+		if (controlKey == 'u' || controlKey == 'U')
+		{
+			controlMode = true;
+
+			//관련 키 도움말 출력
+			printf("Control Mode Unlockded\n");
+			printf("Control Mode : Press 'L' to Lock Control, 'S' to Show Server State, 'Q' to Quit\n");
+		}
+
+		//키보드 제어 잠금
+		if ((controlKey == 'L' || controlKey == 'l') && controlMode)
+		{
+			controlMode = false;
+
+			printf("Control Mode Locked\n");
+			printf("Press 'U' to Unlock Control\n");
+		}
+
+		//키보드 제어 풀림 상태에서 서버 상태 확인
+		if ((controlKey == 'S' || controlKey == 's') && controlMode)
+		{
+			ShowServerInfo();
+		}
+
+		//키보드 제어 풀림 상태에서 서버 종료
+		if ((controlKey == 'Q' || controlKey == 'q') && controlMode)
+		{
+			Stop();
+		}
+
+		if (controlMode)
+		{
+			OtherServerControl(controlKey);
+		}
+	}
+}
+
+void ContentsServer::ShowServerInfo()
+{
+	switch (_coreState)
+	{
+	case(CORE_CREATED):
+	{
+		printf("Core State : CORE_CREATED\n");
+		break;
+	}
+	case(CORE_RUNNING):
+	{
+		printf("Core State : CORE_RUNNING\n");
+		break;
+	}
+	case(CORE_STOPPING):
+	{
+		printf("Core State : CORE_STOPPING\n");
+		break;
+	}
+	case(CORE_STOPPED):
+	{
+		printf("Core State : CORE_STOPPED\n");
+		break;
+	}
+	}
+	printf("Session : %d\nAcceptTotal : %d\nAcceptTPS : %d\nRecvTPS : %\nSendTPS: %d\nSBufferCapacity : %d\nSBufferUsing : %d\n"
+	,GetSessionCount(),GetAcceptTotal(),GetAcceptTPS(),GetRecvMessageTPS(),GetSendMessageTPS(),GetSBufferCapacity(),GetSBufferUsingCount());
 }
 
 
@@ -386,6 +463,12 @@ void ContentsServer::StopWorkerThread()
 	LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer Stop Worker");
 	printf("ContentsServer Stop Worker\n");
 	CheckAllCoreStopped();
+}
+
+//L,U,S,Q는 제외
+void ContentsServer::OtherServerControl(int controlKey)
+{
+
 }
 
 void ContentsServer::CheckAllCoreStopped()

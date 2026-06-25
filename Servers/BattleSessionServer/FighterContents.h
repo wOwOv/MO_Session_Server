@@ -9,11 +9,10 @@ public:
 	MatchContents();
 	~MatchContents();
 
-	void StopMatch();
-
 	virtual void OnEnter(__int64 sessionID, void* extra) override;
 	virtual void OnLeave(__int64 sessionID, void* extra) override;
 	virtual void OnUpdate() override;
+	virtual void OnShutDown() override;
 
 private:
 	void DisconnectAllPlayer();
@@ -34,6 +33,7 @@ public:
 	virtual void OnEnter(__int64 sessionID, void* extra) override;
 	virtual void OnLeave(__int64 sessionID, void* extra)override;
 	virtual void OnUpdate() override;
+	virtual void OnShutDown() override;
 
 	void Init(__int64 matchID);
 	void Clear();

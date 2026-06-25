@@ -31,7 +31,15 @@ public:
 	~FighterServer();
 
 	void FighterServerStart(const char* txtname, char code = 0, char key = 0);
-	void RequestDeregisterMatchContents();
+	virtual void Stop() override;
+
+	//virtual void ServerControl();
+	virtual void ShowServerInfo() override;
+	virtual void OtherServerControl(int controlKey) override;
+
+	bool IsShutDownRequested();
+
+	void RequestStopMatchContents();
 	void StopControlThread();
 	void StopDBThread();
 
@@ -79,6 +87,7 @@ private:
 	};
 
 private:
+	bool _shutDown = false;
 	std::atomic<int> _state=SERVER_CREATED;
 
 	//MatchContents

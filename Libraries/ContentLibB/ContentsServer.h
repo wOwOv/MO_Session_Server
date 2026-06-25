@@ -94,6 +94,9 @@ public:
 	ContentsServer(unsigned char type = LANSERVER);
 	virtual ~ContentsServer();
 
+	virtual void ServerControl();
+	virtual void ShowServerInfo();
+
 	bool Start(const char* txtname, char code = 0, char key = 0);
 	virtual void Stop();
 	bool Disconnect(__int64 sessionID);
@@ -129,6 +132,8 @@ protected:
 	void StopTimeOutThread();
 	void StopMonitorThread();
 	void StopWorkerThread();
+
+	virtual void OtherServerControl(int controlKey);
 
 private:
 	void CheckAllCoreStopped();
