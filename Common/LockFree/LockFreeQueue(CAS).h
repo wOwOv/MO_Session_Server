@@ -29,13 +29,10 @@ public:
 
 	__forceinline ~LFQueue()
 	{
-		while (_head->_next != nullptr)
+		DATA temp;
+		//노드풀로 모두 반환
+		while (Dequeue(&temp))
 		{
-			Node* next = _head->_next;
-
-			unsigned long long realadr = (unsigned long long)_head & ADRMASK;
-			delete (Node*)realadr;
-			_head = next;
 		}
 	}
 	__forceinline void Enqueue(DATA data)

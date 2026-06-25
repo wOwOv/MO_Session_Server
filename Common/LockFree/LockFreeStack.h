@@ -20,15 +20,10 @@ public:
 
 	~LFStack()
 	{
-		if (_top != nullptr)
+		DATA temp;
+		//노드풀로 모두 반환
+		while (Pop(&temp))
 		{
-			do
-			{
-				Node* temp = _top->_next;
-				delete _top;
-				_top = temp;
-
-			} while (_top != nullptr);
 		}
 	}
 
