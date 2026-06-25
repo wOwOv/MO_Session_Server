@@ -17,8 +17,36 @@ MatchContents::~MatchContents()
 	delete stub;
 }
 
+void MatchContents::DisconnectAllPlayer()
+{
+	for (auto& iter : _playerMap)
+	{
+		Player* player = iter.second;
+		_mServer->Disconnect(player->_sessionID);
+	}
+	if (_playerMap.empty())
+	{
+		if (CheckStopRequested())
+		{
+			FighterServer* server = (FighterServer*)_mServer;
+			Control* control = server->_controlPool.Alloc();
+			control->_type = CONTROLTYPE::MATCHDEREGISTER;
+			server->_ctrlQ.Enqueue(control);
+			server->_ctrlCv.notify_one();
+		}
+	}
+}
+
+
+
 void MatchContents::OnEnter(__int64 sessionID, void* extra)
 {
+	if (_stopRequested.load()==true)
+	{
+		_mServer->Disconnect(sessionID);
+		return;
+	}
+
 	FighterServer* server = (FighterServer*)_mServer;
 	ReadLock lock(server->_playerMutex);
 	Player* player;
@@ -32,7 +60,7 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 		if (_playerMap.size() >= 6)
 		{
 			Control* control = server->_controlPool.Alloc();
-			control->_type = 1;
+			control->_type = CONTROLTYPE::FIGHTALLOC;
 			std::unordered_map<SessionID, Player*>::iterator mit;
 			for (int i = 0; i < 3; i++)
 			{
@@ -63,10 +91,33 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 void MatchContents::OnLeave(__int64 sessionID, void* extra)
 {
 	_playerMap.erase(sessionID);
+	if(CheckStopRequested())
+	{
+		FighterServer* server = (FighterServer*)_mServer;
+		Control* control = server->_controlPool.Alloc();
+		control->_type = CONTROLTYPE::MATCHDEREGISTER;
+		server->_ctrlQ.Enqueue(control);
+		server->_ctrlCv.notify_one();
+	}
 }
 
 void MatchContents::OnUpdate()
 {
+}
+
+void MatchContents::OnShutDown()
+{
+	_stopRequested.store(true);
+	DisconnectAllPlayer();
+}
+
+bool MatchContents::CheckStopRequested()
+{
+	if (_playerMap.empty() && _stopRequested.load() == true)
+	{
+		return true;
+	}
+	return false;
 }
 
 FightContents::FightContents():Contents(0,20)
@@ -222,7 +273,7 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 		server->RequestSaveBattleResult(result);
 
 		Control* control = server->_controlPool.Alloc();
-		control->_type = 2;
+		control->_type = CONTROLTYPE::FIGHTFREE;
 		control->_contents = this;
 
 		server->_ctrlQ.Enqueue(control);
@@ -341,6 +392,10 @@ void FightContents::OnUpdate()
 		}
 	}
 }
+
+void FightContents::OnShutDown()
+{}
+
 void FightContents::Init(__int64 matchID)
 {
 	_matchID = matchID;

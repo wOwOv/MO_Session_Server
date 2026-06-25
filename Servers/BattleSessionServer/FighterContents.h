@@ -12,8 +12,14 @@ public:
 	virtual void OnEnter(__int64 sessionID, void* extra) override;
 	virtual void OnLeave(__int64 sessionID, void* extra) override;
 	virtual void OnUpdate() override;
+	virtual void OnShutDown() override;
 
 private:
+	void DisconnectAllPlayer();
+	bool CheckStopRequested();
+
+private:
+	std::atomic<bool> _stopRequested = false;
 	std::unordered_map<SessionID, Player* > _playerMap;
 
 };
@@ -27,6 +33,7 @@ public:
 	virtual void OnEnter(__int64 sessionID, void* extra) override;
 	virtual void OnLeave(__int64 sessionID, void* extra)override;
 	virtual void OnUpdate() override;
+	virtual void OnShutDown() override;
 
 	void Init(__int64 matchID);
 	void Clear();

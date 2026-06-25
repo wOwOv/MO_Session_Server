@@ -32,10 +32,10 @@ public:
 	IProxy* DetachProxy();
 
 protected:
-	virtual void OnEnter(__int64 sessionID, void* extra) = 0;
+	virtual void OnEnter(__int64 sessionID, void* extra) = 0;  
 	virtual void OnLeave(__int64 sessionID, void* extra) = 0;
 	virtual void OnUpdate() = 0;
-
+	virtual void OnShutDown()=0;		//컨텐츠를 종료하는 과정에서 락을 잡고 필요한 작업하는 용도
 
 
 private:

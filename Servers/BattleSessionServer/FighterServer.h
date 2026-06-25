@@ -16,10 +16,32 @@ class FighterServer:public ContentsServer
 {
 	friend class MatchContents;
 	friend class FightContents;
-
+private:
+	enum ServerState
+	{
+		SERVER_CREATED = 0, 
+		SERVER_RUNNING = 1,
+		ACCEPT_STOPPED = 2,
+		MATCH_DEREGISTERED = 3,
+		CONTROL_STOPPED=4,
+		DB_STOPPED = 5,
+	};
 public:
 	FighterServer();
 	~FighterServer();
+
+	void FighterServerStart(const char* txtname, char code = 0, char key = 0);
+	virtual void Stop() override;
+
+	//virtual void ServerControl();
+	virtual void ShowServerInfo() override;
+	virtual void OtherServerControl(int controlKey) override;
+
+	bool IsShutDownRequested();
+
+	void RequestStopMatchContents();
+	void StopControlThread();
+	void StopDBThread();
 
 	virtual bool OnConnectionRequest(SOCKADDR_IN* clientaddr) override;
 	virtual void OnAccept(SOCKADDR_IN* clientaddr, __int64 sessionID) override;
@@ -35,8 +57,6 @@ public:
 	int GetPlayerPoolUsingCount();
 	int GetControlPoolCapacity();
 	int GetControlPoolUsingCount();
-	
-	void StopDBThread();
 
 	__int64 CreateMatchID();
 
@@ -67,12 +87,19 @@ private:
 	};
 
 private:
+	bool _shutDown = false;
+	std::atomic<int> _state=SERVER_CREATED;
+
+	//MatchContents
+	MatchContents* _matchContents = nullptr;
+
 	//제어스레드
 	std::thread _CtrlThread;
 	LFQueue<Control*> _ctrlQ;
 	std::condition_variable _ctrlCv;
 	std::mutex _ctrlMtx;
 	MemoryPool<FightContents> _fightPool;
+	std::atomic<bool> _ctrlThreadRun;
 
 	MatchIDGenerator _matchIDGenerator;
 
@@ -81,7 +108,7 @@ private:
 	std::queue<DBRequest> _dbQ;
 	std::condition_variable _dbCv;
 	std::mutex _dbMtx;
-	bool _dbThreadRun;
+	std::atomic<bool> _dbThreadRun;
 
 
 	std::unordered_set<SOCKADDR_IN, SockAddrInHash, SockAddrInEqual> _banSet;

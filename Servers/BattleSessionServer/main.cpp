@@ -10,28 +10,14 @@ int main()
 	logger->SetDirectory(L"Debug");
 	logger->SetLogLevel(LVSYSTEM);
 
-	ContentsServer* server = new FighterServer;
-	server->Start("FighterServerConfig.cnf");
-	FighterServer* fserver = (FighterServer*)server;
+	FighterServer* server = new FighterServer;
+	server->FighterServerStart("FighterServerConfig.cnf");
 
-	while (1)
+	while (!server->IsShutDownRequested())
 	{
+		server->ShowServerInfo();
+		server->ServerControl();
 		Sleep(1000);
-		printf("****************************************\n");
-		printf("Session: %d\n", server->GetSessionCount());
-		printf("BufferCapacity: %d\n", server->GetSBufferCapacity());
-		printf("BufferUsing: %d\n", server->GetSBufferUsingCount());
-		printf("RecvTPS: %d\n", server->GetRecvMessageTPS());
-		printf("SendTPS: %d\n", server->GetSendMessageTPS());
-		printf("\n\n");
-		printf("FightResourceCapacity: %d\n", fserver->GetFightPoolCapacity());
-		printf("FightResourceUsing: %d\n", fserver->GetFightPoolUsingCount());
-		printf("PlayerPoolCapacity: %d\n", fserver->GetPlayerPoolCapacity());
-		printf("PlayerPoolUsing: %d\n", fserver->GetPlayerPoolUsingCount());
-		printf("ControlPoolCapacity: %d\n", fserver->GetControlPoolCapacity());
-		printf("ControlPoolUsing: %d\n", fserver->GetControlPoolUsingCount());
-		printf("Player: %d\n", fserver->GetPlayerCount());
-		printf("****************************************\n\n");
-
 	}
+	LOG(L"SYSTEM", LVSYSTEM, L"FighterServer ShutDown");
 }
