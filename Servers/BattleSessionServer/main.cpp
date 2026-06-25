@@ -19,4 +19,5 @@ int main()
 		server->ServerControl();
 		Sleep(1000);
 	}
+	LOG(L"SYSTEM", LVSYSTEM, L"FighterServer ShutDown");
 }
