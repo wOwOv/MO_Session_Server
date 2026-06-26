@@ -1,7 +1,9 @@
 #ifndef  __MEMORYPOOL__
 #define  __MEMORYPOOL__
-#include <new.h>
+#include <new>
 #include <windows.h>
+#include <vector>
+#include <memory>
 
 static int key = 0xaaaa;
 
@@ -10,9 +12,9 @@ class MemoryPool
 {
 
 private:
-	const unsigned long long ADRMASK=0x0000ffffffffffff;
-	const unsigned long long TAGMASK=0xffff000000000000;
-	const unsigned long long MAKETAG=0x0001000000000000;
+	static constexpr unsigned long long ADRMASK=0x0000ffffffffffff;
+	static constexpr unsigned long long TAGMASK=0xffff000000000000;
+	static constexpr unsigned long long MAKETAG=0x0001000000000000;
 
 private:
 	struct Node
@@ -20,10 +22,8 @@ private:
 		DATA _data;
 		Node* _next;
 	};
-
-
+	
 public:
-
 	//////////////////////////////////////////////////////////////////////////
 	// 생성자, 파괴자.
 	//
@@ -40,77 +40,37 @@ public:
 
 		_key = 0;
 
-		//생성자 호출한 상태로 들어가야함
-		if (_pnFlag == 0)
-		{
-			for (int i = 0; i < BlockNum; i++)
-			{
-				Node* node = new Node;
-
-				node->_next = _head;
-				_head = node;
-			}
-		}
-		else//생성자 호출 없이 들어가야함
-		{
-			for (int i = 0; i < BlockNum; i++)
-			{
-				Node* node = (Node*)malloc(sizeof(Node));
-
-				node->_next = _head;
-				_head = node;
-			}
-		}
-
-
 		_capacity = BlockNum;
 		_usingCount = 0;
 
+		if (BlockNum == 0)
+		{
+			return;
+		}
+
+		//생성자 호출한 상태로 들어가야함
+		Node* chunk = nullptr;
+		if (_pnFlag)
+		{
+			chunk = static_cast<Node*>(::operator new(sizeof(Node) * 100));
+		}
+		else
+		{
+			chunk = new Node[100];
+		}
+		_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
+		for (int i = 0; i < 100; ++i)
+		{
+			Node* node = &chunk[i];
+			node->_next = _head;
+			_head = node;
+		}
+	
 
 	}
 	virtual	~MemoryPool()
 	{
-		Node* node = _head;
-		Node* temp = node;
-		//이미 생성자 호출되어있는 상태로 들어있음. 소멸자 호출 되어야함
-		if (_pnFlag == 0)
-		{
-			while (1)
-			{
-				if (node != nullptr)
-				{
-					unsigned long long tempadr = (unsigned long long)node;
-					tempadr &= ADRMASK;
-					Node* realadr = (Node*)tempadr;
-					temp = realadr->_next;
-					delete realadr;
-					node = temp;
-				}
-				else
-				{
-					break;
-				}
-			}
-		}
-		else
-		{
-			while (1)
-			{
-				if (node != nullptr)
-				{
-					unsigned long long tempadr = (unsigned long long)node;
-					tempadr &= ADRMASK;
-					Node* realadr = (Node*)tempadr;
-					temp = realadr->_next;
-					free (realadr);
-					node = temp;
-				}
-				else
-				{
-					break;
-				}
-			}
-		}
+
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -121,29 +81,23 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline DATA* Alloc(void)
 	{
-		Node* allocated;
-		Node* oldhead;
-		Node* newhead;
-		Node* realadr;
+		Node* allocated=nullptr;
+		Node* oldhead=nullptr;
+		Node* newhead=nullptr;
+		Node* realadr=nullptr;
 		unsigned long long tempadr;
 		do
 		{
 			oldhead = _head;
 			if (oldhead == nullptr)
 			{
-				if (_maxFlag == true)
+				if (_maxFlag == true&& _maxcount >= _capacity)
 				{
-					if (_maxcount == _capacity)
-					{
 						return nullptr;
-					}
 				}
-				allocated = new Node;
-				realadr = allocated;
-				InterlockedIncrement(&_capacity);
-				break;
+				ChunkAlloc();
+				continue;
 			}
-
 			tempadr = (unsigned long long)oldhead;
 			tempadr &= ADRMASK;
 			realadr = (Node*)tempadr;
@@ -242,6 +196,74 @@ private:
 
 	short _key;
 
+private:
+	struct ChunkDeleter
+	{
+		bool _placementNew = false;
+
+		void operator()(Node* chunk) const noexcept
+		{
+			if (chunk == nullptr)
+			{
+				return;
+			}
+
+			if (_placementNew)
+			{
+				::operator delete(chunk);
+			}
+			else
+			{
+				delete[] chunk;
+			}
+		}
+	};
+	using ChunkOwner = std::unique_ptr<Node, ChunkDeleter>;
+
+	void ChunkAlloc()
+	{
+		Node* chunk = nullptr;
+		if (_pnFlag)
+		{
+			chunk = static_cast<Node*>(::operator new(sizeof(Node) * 100));
+		}
+		else
+		{
+			chunk = new Node[100];
+		}
+		{
+			std::lock_guard<std::mutex > lock(_mutex);
+			_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
+		}
+		
+		//100번->0번 순서, 0번노드는 과거 헤드를 next로 가져야함
+		for (int i = 1; i < 100; ++i)
+		{
+			Node* node = &chunk[i];
+			node->_next = &chunk[i-1];
+		}
+		Node* newhead = &chunk[99];
+		Node* lastnode = &chunk[0];
+
+		Node* oldhead;
+		unsigned long long countnode;
+		do
+		{
+			countnode = (unsigned long long)newhead;
+			oldhead = _head;
+			unsigned long long tag = (unsigned long long)oldhead;
+			tag &= TAGMASK;
+			tag += MAKETAG;
+			countnode |= tag;
+			lastnode->_next = oldhead;
+		} while (InterlockedCompareExchange64((__int64*)&_head, (__int64)countnode, (__int64)oldhead) != (__int64)oldhead);
+		InterlockedAdd((LONG*) & _capacity, 100);
+
+
+	}
+
+	std::mutex _mutex;
+	std::vector<ChunkOwner> _chunks;
 };
 
 
