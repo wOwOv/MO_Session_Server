@@ -26,6 +26,10 @@ public:
 		{
 		}
 	}
+	LFStack(const LFStack&) = delete;
+	LFStack& operator=(const LFStack&) = delete;
+	LFStack(LFStack&&) = delete;
+	LFStack& operator=(LFStack&&) = delete;
 
 	bool Push(DATA data)
 	{

@@ -23,6 +23,8 @@ public:
 	HwPDProducer();
 	~HwPDProducer();
 
+
+
 	double GetCpuTotal(void) { return _cpuV.doubleValue; }
 	double GetAvailableM(void) { return _availableV.doubleValue; }
 	double GetNonpagedM(void) { return _nonpagedV.doubleValue; }

@@ -73,7 +73,10 @@ public:
 	{
 
 	}
-
+	MemoryPool(const MemoryPool&) = delete;
+	MemoryPool& operator=(const MemoryPool&) = delete;
+	MemoryPool(MemoryPool&&) = delete;
+	MemoryPool& operator=(MemoryPool&&) = delete;
 	//////////////////////////////////////////////////////////////////////////
 	// 블럭 하나를 할당받는다.  
 	//

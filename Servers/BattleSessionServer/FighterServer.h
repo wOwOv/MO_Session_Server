@@ -30,6 +30,11 @@ public:
 	FighterServer();
 	~FighterServer();
 
+	FighterServer(const FighterServer&) = delete;
+	FighterServer& operator=(const FighterServer&) = delete;
+	FighterServer(FighterServer&&) = delete;
+	FighterServer& operator=(FighterServer&&) = delete;
+
 	void FighterServerStart(const char* txtname, char code = 0, char key = 0);
 	virtual void Stop() override;
 

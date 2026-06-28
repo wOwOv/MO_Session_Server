@@ -97,6 +97,11 @@ public:
 	ContentsServer(ServerType type = ServerType::LANSERVER);
 	virtual ~ContentsServer();
 
+	ContentsServer(const ContentsServer&) = delete;
+	ContentsServer& operator=(const ContentsServer&) = delete;
+	ContentsServer(ContentsServer&&) = delete;
+	ContentsServer& operator=(ContentsServer&&) = delete;
+
 	virtual void ServerControl();
 	virtual void ShowServerInfo();
 

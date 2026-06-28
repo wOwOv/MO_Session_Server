@@ -18,6 +18,11 @@ public:
 	Contents(__int32 contentsnum,__int32 frame);
 	virtual ~Contents();
 
+	Contents(const Contents&) = delete;
+	Contents& operator=(const Contents&) = delete;
+	Contents(Contents&&) = delete;
+	Contents& operator=(Contents&&) = delete;
+
 	unsigned long GetFPS();
 	unsigned long GetLogic();
 
