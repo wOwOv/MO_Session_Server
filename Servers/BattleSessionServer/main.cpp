@@ -10,7 +10,8 @@ int main()
 	logger->SetDirectory(L"Debug");
 	logger->SetLogLevel(LVSYSTEM);
 
-	FighterServer* server = new FighterServer;
+	
+	auto server = std::make_unique<FighterServer>(); 
 	server->FighterServerStart("FighterServerConfig.cnf");
 
 	while (!server->IsShutDownRequested())
@@ -20,5 +21,4 @@ int main()
 		Sleep(1000);
 	}
 	LOG(L"SYSTEM", LVSYSTEM, L"FighterServer ShutDown");
-	delete server;
 }

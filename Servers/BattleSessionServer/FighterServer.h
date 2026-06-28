@@ -17,7 +17,7 @@ class FighterServer:public ContentsServer
 	friend class MatchContents;
 	friend class FightContents;
 private:
-	enum ServerState
+	enum ServerState : std::uint8_t
 	{
 		SERVER_CREATED = 0, 
 		SERVER_RUNNING = 1,
@@ -29,6 +29,11 @@ private:
 public:
 	FighterServer();
 	~FighterServer();
+
+	FighterServer(const FighterServer&) = delete;
+	FighterServer& operator=(const FighterServer&) = delete;
+	FighterServer(FighterServer&&) = delete;
+	FighterServer& operator=(FighterServer&&) = delete;
 
 	void FighterServerStart(const char* txtname, char code = 0, char key = 0);
 	virtual void Stop() override;
@@ -43,10 +48,10 @@ public:
 	void StopControlThread();
 	void StopDBThread();
 
-	virtual bool OnConnectionRequest(SOCKADDR_IN* clientaddr) override;
-	virtual void OnAccept(SOCKADDR_IN* clientaddr, __int64 sessionID) override;
+	virtual bool OnConnectionRequest(const SOCKADDR_IN& clientaddr) override;
+	virtual void OnAccept(const SOCKADDR_IN& clientaddr, __int64 sessionID) override;
 	virtual void OnRelease(__int64 sessionID, __int32 contentsnum)override;
-	virtual void OnUnusual(__int64 sessionID, SOCKADDR_IN clientaddr) override;
+	virtual void OnUnusual(__int64 sessionID, const SOCKADDR_IN& clientaddr) override;
 	virtual void OnSecond() override;
 
 	int GetFightPoolCapacity();
@@ -69,7 +74,7 @@ private:
 	static unsigned __stdcall DBThread(LPVOID arg);
 
 private:
-	void PushDBRequest(const DBRequest& request);
+	void PushDBRequest(DBRequest request);
 	bool WaitAndPopDBRequest(DBRequest& outrequest);
 
 private:
@@ -88,10 +93,10 @@ private:
 
 private:
 	bool _shutDown = false;
-	std::atomic<int> _state=SERVER_CREATED;
+	std::atomic<ServerState> _state= ServerState::SERVER_CREATED;
 
 	//MatchContents
-	MatchContents* _matchContents = nullptr;
+	std::unique_ptr<MatchContents> _matchContents;
 
 	//제어스레드
 	std::thread _CtrlThread;
@@ -114,7 +119,7 @@ private:
 	std::unordered_set<SOCKADDR_IN, SockAddrInHash, SockAddrInEqual> _banSet;
 	std::shared_mutex _banMutex;
 
-	std::unordered_map<SessionID,Player*> _playerMap;
+	std::unordered_map<SessionID,Player*> _playerMap;// non-owning; Player objects are owned by _playerPool
 	std::shared_mutex _playerMutex;
 
 	TlsMemoryPool<Player> _playerPool;

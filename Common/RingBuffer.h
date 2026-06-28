@@ -3,7 +3,7 @@
 
 
 
-#define DEF 5000
+static constexpr int DEFAULT_BUFFER_SIZE = 5000;
 
 
 class RingBuffer
@@ -15,9 +15,9 @@ public:
 	int _size;
 
 public:
-	__forceinline RingBuffer() :_front(0), _rear(0), _size(DEF)
+	__forceinline RingBuffer() :_front(0), _rear(0), _size(DEFAULT_BUFFER_SIZE)
 	{
-		_buffer = (char*)malloc(sizeof(char) * DEF);
+		_buffer = (char*)malloc(sizeof(char) * DEFAULT_BUFFER_SIZE);
 	}
 
 	__forceinline RingBuffer(int buffersize) :_front(0), _rear(0), _size(buffersize)

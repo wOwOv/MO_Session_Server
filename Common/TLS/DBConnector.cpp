@@ -25,7 +25,7 @@ bool DBConnector::Connect()
 	
 	_connection = mysql_real_connect(&_conn, _host, _user, _passwd, _db, _port, (char*)NULL, 0);
 	_queryStat = mysql_set_server_option(_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
-	if (_connection == NULL)
+	if (_connection == nullptr)
 	{
 		// mysql_errno(&_MySQL);
 		LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&_conn));

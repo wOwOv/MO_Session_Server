@@ -28,7 +28,7 @@ void MatchContents::DisconnectAllPlayer()
 	{
 		if (CheckStopRequested())
 		{
-			FighterServer* server = (FighterServer*)_mServer;
+			FighterServer* server = static_cast<FighterServer*>(_mServer);
 			Control* control = server->_controlPool.Alloc();
 			control->_type = CONTROLTYPE::MATCHDEREGISTER;
 			server->_ctrlQ.Enqueue(control);
@@ -47,7 +47,7 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 		return;
 	}
 
-	FighterServer* server = (FighterServer*)_mServer;
+	FighterServer* server = static_cast<FighterServer*>(_mServer);
 	ReadLock lock(server->_playerMutex);
 	Player* player;
 	std::unordered_map<SessionID, Player*>::iterator it = server->_playerMap.find(sessionID);
@@ -66,7 +66,7 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 			{
 				mit = _playerMap.begin();
 				Player* player = mit->second;
-				player->_team = RED;
+				player->_team = Team::RED;
 				control->_group._red[i] = player->_sessionID;
 				_mServer->SetContentsNum(player->_sessionID, CONMOV);
 				_playerMap.erase(mit);
@@ -75,7 +75,7 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 			{
 				mit = _playerMap.begin();
 				Player* player = mit->second;
-				player->_team = BLUE;
+				player->_team = Team::BLUE;
 				control->_group._blue[i] = player->_sessionID;
 				_mServer->SetContentsNum(player->_sessionID, CONMOV);
 				_playerMap.erase(mit);
@@ -93,7 +93,7 @@ void MatchContents::OnLeave(__int64 sessionID, void* extra)
 	_playerMap.erase(sessionID);
 	if(CheckStopRequested())
 	{
-		FighterServer* server = (FighterServer*)_mServer;
+		FighterServer* server = static_cast<FighterServer*>(_mServer);
 		Control* control = server->_controlPool.Alloc();
 		control->_type = CONTROLTYPE::MATCHDEREGISTER;
 		server->_ctrlQ.Enqueue(control);
@@ -140,7 +140,7 @@ FightContents::~FightContents()
 
 void FightContents::OnEnter(__int64 sessionID, void* extra)
 {
-	FighterServer* server = (FighterServer*)_mServer;
+	FighterServer* server = static_cast<FighterServer*>(_mServer);
 	ReadLock lock(server->_playerMutex);
 	Player* player;
 	std::unordered_map<SessionID, Player*>::iterator it = server->_playerMap.find(sessionID);
@@ -149,7 +149,7 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 		player = it->second;
 		_mServer->SetContentsNum(player->_sessionID, GetContentsNum());
 		player->_contents = GetContentsNum();
-		if (player->_team == RED)
+		if (player->_team == Team::RED)
 		{
 			_redCount++;
 		}
@@ -173,7 +173,7 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 			tgt->_id = id++;
 			tgt->_hp = 100;
 			tgt->_move = -1;
-			if (tgt->_team == 1)		//red
+			if (tgt->_team == Team::RED)		//red
 			{
 				_red[redcnt] = tgt->_sessionID;
 				tgt->_x = REDX;
@@ -225,7 +225,7 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 	}
 	Player* player = it->second;
 
-	if(player->_team==1)
+	if(player->_team==Team::RED)
 	{
 		_redCount--;
 	}

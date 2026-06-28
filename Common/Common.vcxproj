@@ -153,6 +153,7 @@
     <ClInclude Include="PDProducer.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="SerialBuffer.h" />
+    <ClInclude Include="SRWLockGuard.h" />
     <ClInclude Include="TLS\DBConnector.h" />
     <ClInclude Include="TLS\TlsMemoryPool.h" />
     <ClInclude Include="TLS\TLSRedisConnector.h" />

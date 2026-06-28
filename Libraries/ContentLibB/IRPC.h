@@ -10,11 +10,11 @@ public:
 	virtual void ProcMessage(__int64 sessionID, CPacket packet) = 0;
 	void ConnectServer(void* server)
 	{
-		_server = (ContentsServer*)server;
+		_server = static_cast<ContentsServer*>(server);
 	}
 	void ConnectContents(void* contents)
 	{
-		_contents = (Contents*)contents;
+		_contents = static_cast<Contents*>(contents);
 	}
 
 protected:
@@ -26,7 +26,7 @@ class IProxy
 public:
 	void ConnectServer(void* server)
 	{
-		_server = (ContentsServer*)server;
+		_server = static_cast<ContentsServer*>(server);
 	}
 
 protected:

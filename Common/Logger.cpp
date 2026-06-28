@@ -1,7 +1,6 @@
 #include "Logger.h"
 #include <strsafe.h>
 #include <chrono>
-#include <mutex>
 #include <windows.h>
 
 
@@ -10,7 +9,7 @@ unsigned long long _logCount = 0;
 LOG_LEVEL _logLevel = LVDEBUG;
 std::mutex key;
 
-#define LOGMAX 1024
+namespace { constexpr int LOG_MAX = 1024; }
 
 Logger* Logger::_Logger = nullptr;
 std::mutex Logger::_key;
@@ -38,27 +37,27 @@ void Logger::Log(const WCHAR* Type, LOG_LEVEL Level, const WCHAR* String, ...)
 	StringCchPrintfW(filename, 256, L".\\%ls\\%ls_%02d_%02d.txt", _Directory, Type, ymd.tm_year + 1900, ymd.tm_mon + 1);
 
 
-	WCHAR log[LOGMAX];
-	WCHAR buffer[LOGMAX * 5];
+	WCHAR log[LOG_MAX];
+	WCHAR buffer[LOG_MAX * 5];
 
 	va_list va;
 	va_start(va, String);
-	HRESULT result = StringCchVPrintfW(log, LOGMAX, String, va);
+	HRESULT result = StringCchVPrintfW(log, LOG_MAX, String, va);
 	va_end(va);
 
 	HRESULT lastresult;
 	switch (Level)
 	{
 	case LVDEBUG:
-		lastresult= StringCchPrintfW(buffer, LOGMAX * 5, L"[%s] [%d-%02d-%02d %02d:%02d:%02d] [%lld] [DEBUG] %ls \n",
+		lastresult= StringCchPrintfW(buffer, LOG_MAX * 5, L"[%s] [%d-%02d-%02d %02d:%02d:%02d] [%lld] [DEBUG] %ls \n",
 			Type, ymd.tm_year + 1900, ymd.tm_mon + 1, ymd.tm_mday, ymd.tm_hour, ymd.tm_min, ymd.tm_sec, InterlockedIncrement(&_logCount), log);
 		break;
 	case LVERROR:
-		lastresult = StringCchPrintfW(buffer, LOGMAX * 5, L"[%s] [%d-%02d-%02d %02d:%02d:%02d] [%lld] [ERROR] %ls \n",
+		lastresult = StringCchPrintfW(buffer, LOG_MAX * 5, L"[%s] [%d-%02d-%02d %02d:%02d:%02d] [%lld] [ERROR] %ls \n",
 			Type, ymd.tm_year + 1900, ymd.tm_mon + 1, ymd.tm_mday, ymd.tm_hour, ymd.tm_min, ymd.tm_sec, InterlockedIncrement(&_logCount), log);
 		break;
 	case LVSYSTEM:
-		lastresult = StringCchPrintfW(buffer, LOGMAX * 5, L"[%s] [%d-%02d-%02d %02d:%02d:%02d] [%lld] [SYSTEM] %ls \n",
+		lastresult = StringCchPrintfW(buffer, LOG_MAX * 5, L"[%s] [%d-%02d-%02d %02d:%02d:%02d] [%lld] [SYSTEM] %ls \n",
 			Type, ymd.tm_year + 1900, ymd.tm_mon + 1, ymd.tm_mday, ymd.tm_hour, ymd.tm_min, ymd.tm_sec, InterlockedIncrement(&_logCount), log);
 		break;
 	}

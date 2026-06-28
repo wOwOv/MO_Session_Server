@@ -1,18 +1,17 @@
 #include "FighterServer.h"
-#include "FighterStructure.h"
 #include "DBConnector.h"
 #include "BattleDB.h"
 #include <thread>
 
 
-FighterServer::FighterServer() :ContentsServer(LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
+FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
 {
 	_ctrlThreadRun.store(true);
 	_CtrlThread = std::thread(CtrlThread, this);
 	_dbThreadRun.store(true);
 	_DBThread = std::thread(DBThread, this);
-	_matchContents = new MatchContents;
-	RegisterContents(MATCH, _matchContents);
+	_matchContents = std::make_unique<MatchContents>();
+	RegisterContents(MATCH, _matchContents.get());
 	SetDefaultContents(MATCH);
 }
 
@@ -54,20 +53,20 @@ void FighterServer::Stop()
 }
 
 
-bool FighterServer::OnConnectionRequest(SOCKADDR_IN* clientaddr)
+bool FighterServer::OnConnectionRequest(const SOCKADDR_IN& clientaddr)
 {
-	if (_banSet.find(*clientaddr) != _banSet.end())
+	if (_banSet.find(clientaddr) != _banSet.end())
 	{
 		return false;
 	}
 	return true;
 }
 
-void FighterServer::OnAccept(SOCKADDR_IN* clientaddr, __int64 sessionID)
+void FighterServer::OnAccept(const SOCKADDR_IN& clientaddr, __int64 sessionID)
 {
 	Player* player = _playerPool.Alloc();
 	player->_sessionID = sessionID;
-	player->_clientAddr = *clientaddr;
+	player->_clientAddr = clientaddr;
 	WriteLock lock(_playerMutex);
 	_playerMap.insert(std::make_pair(sessionID, player));
 }
@@ -87,7 +86,7 @@ void FighterServer::OnRelease(__int64 sessionID, __int32 contentsnum)
 
 }
 
-void FighterServer::OnUnusual(__int64 sessionID, SOCKADDR_IN clientaddr)
+void FighterServer::OnUnusual(__int64 sessionID, const SOCKADDR_IN& clientaddr)
 {
 	WriteLock lock(_banMutex);
 	_banSet.insert(clientaddr);
@@ -200,7 +199,7 @@ void FighterServer::RequestStopMatchContents()
 void FighterServer::StopControlThread()
 {
 	{
-		std::lock_guard<std::mutex> lock(_dbMtx);
+		std::lock_guard<std::mutex> lock(_ctrlMtx);
 		_ctrlThreadRun.store(false);
 	}
 
@@ -371,11 +370,11 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 	return 1;
 }
 
-void FighterServer::PushDBRequest(const DBRequest& request)
+void FighterServer::PushDBRequest(DBRequest request)
 {
 	{
 		std::lock_guard<std::mutex> lock(_dbMtx);
-		_dbQ.push(request);
+		_dbQ.push(std::move(request));
 	}
 
 	_dbCv.notify_one();

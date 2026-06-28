@@ -9,6 +9,11 @@ public:
 	DBConnector(const char* txtname);
 	~DBConnector();
 	
+	DBConnector(const DBConnector&) = delete;
+	DBConnector& operator=(const DBConnector&) = delete;
+	DBConnector(DBConnector&&) = delete;
+	DBConnector& operator=(DBConnector&&) = delete;
+
 	bool Connect();
 	void Disconnect();
 
@@ -80,6 +85,11 @@ private:
 public:
 	TLSDBConnector(const char* txtname);
 	~TLSDBConnector();
+
+	TLSDBConnector(const DBConnector&) = delete;
+	TLSDBConnector& operator=(const DBConnector&) = delete;
+	TLSDBConnector(DBConnector&&) = delete;
+	TLSDBConnector& operator=(DBConnector&&) = delete;
 
 	bool Connect();
 	void Disconnect();

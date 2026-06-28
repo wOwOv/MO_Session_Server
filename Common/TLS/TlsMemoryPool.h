@@ -63,6 +63,11 @@ public:
 		
 	}
 
+	TlsMemoryPool(const TlsMemoryPool&) = delete;
+	TlsMemoryPool& operator=(const TlsMemoryPool&) = delete;
+	TlsMemoryPool(TlsMemoryPool&&) = delete;
+	TlsMemoryPool& operator=(TlsMemoryPool&&) = delete;
+
 	__forceinline DATA* Alloc(void)
 	{
 		Node* allocated;

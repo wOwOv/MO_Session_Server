@@ -16,8 +16,8 @@ private:
     static constexpr std::uint16_t MAX_SERVER_ID = 0x03FF;             // 10bit
     static constexpr std::uint16_t MAX_SEQUENCE = 0x0FFF;              // 12bit
 
-    static constexpr int SERVER_ID_SHIFT = 12;
-    static constexpr int TIMESTAMP_SHIFT = 22;
+    static constexpr std::uint32_t SERVER_ID_SHIFT = 12;
+    static constexpr std::uint32_t TIMESTAMP_SHIFT = 22;
 
 private:
     static std::uint64_t GetRelativeUnixTimestampMs();

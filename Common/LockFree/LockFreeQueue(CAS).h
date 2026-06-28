@@ -35,6 +35,11 @@ public:
 		{
 		}
 	}
+	LFQueue(const LFQueue&) = delete;
+	LFQueue& operator=(const LFQueue&) = delete;
+	LFQueue(LFQueue&&) = delete;
+	LFQueue& operator=(LFQueue&&) = delete;
+
 	__forceinline void Enqueue(DATA data)
 	{
 		Node* newnode = _nodepool.Alloc();

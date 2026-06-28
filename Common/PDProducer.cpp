@@ -11,7 +11,7 @@
 
 HwPDProducer::HwPDProducer()
 {
-	PdhOpenQuery(NULL, NULL, &_query);
+	PdhOpenQuery(nullptr, NULL, &_query);
 	PdhAddCounter(_query, L"\\Processor(_Total)\\% Processor Time", NULL, &_cpuTotal);
 	PdhAddCounter(_query, L"\\Memory\\Available MBytes", NULL, &_availableM);
 	PdhAddCounter(_query, L"\\Memory\\Pool Nonpaged Bytes", NULL, &_nonpagedM);

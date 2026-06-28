@@ -11,12 +11,16 @@
 #include "Contents.h"
 #include "LockFreeStack.h"
 #include <shared_mutex>
+#include <cstdint>
 
-#define CPACKETBOXMAX 500
+static constexpr int CPACKET_BOX_MAX = 500;
 
-#define LANSERVER 2
-#define NETSERVER 5
-
+//#define LANSERVER 2
+//#define NETSERVER 5
+enum class ServerType : unsigned char {
+	LANSERVER = 2,
+	NETSERVER = 5
+};
 
 class Contents;
 
@@ -25,7 +29,7 @@ class ContentsServer
 	static constexpr long RELEASEFLAG = 0x80000000;
 
 private:
-	enum CoreServerState
+	enum class CoreServerState: std::uint8_t
 	{
 		CORE_CREATED = 0,  // Start 전
 		CORE_RUNNING = 1,  // Start 성공 후 동작 중
@@ -55,7 +59,7 @@ private:
 	};
 	struct PacketBox
 	{
-		SBuffer* _SBufferArray[CPACKETBOXMAX];
+		SBuffer* _SBufferArray[CPACKET_BOX_MAX];
 		int _count;
 	};
 
@@ -69,12 +73,12 @@ private:
 
 		SOCKET _sock;
 		IN_ADDR _ip;
-		u_short _port;
+		std::uint16_t _port;
 
 		ULONGLONG _time = 0;
 		bool _firstRecv = 0;
 
-		__int64 _sessionID;
+		std::int64_t _sessionID;
 
 		long _sendFlag = 0;
 
@@ -82,26 +86,31 @@ private:
 
 		long _dFlag = 0;		//disconnect flag
 
-		__int32 _msgCount = 0;
+		std::int32_t _msgCount = 0;
 
 		PacketBox _packetBox;
 
-		__int32 _contentsNum=0;//0: 처음들어옴,-1: 이동중
+		std::int32_t _contentsNum=0;//0: 처음들어옴,-1: 이동중
 	};
 
 public:
 
-	ContentsServer(unsigned char type = LANSERVER);
+	ContentsServer(ServerType type = ServerType::LANSERVER);
 	virtual ~ContentsServer();
+
+	ContentsServer(const ContentsServer&) = delete;
+	ContentsServer& operator=(const ContentsServer&) = delete;
+	ContentsServer(ContentsServer&&) = delete;
+	ContentsServer& operator=(ContentsServer&&) = delete;
 
 	virtual void ServerControl();
 	virtual void ShowServerInfo();
 
 	bool Start(const char* txtname, char code = 0, char key = 0);
 	virtual void Stop();
-	bool Disconnect(__int64 sessionID);
-	bool SendPacket(__int64 sessionID, CPacket packet);
-	void PostQueueContentsShutDown(__int32 contentsnum);
+	bool Disconnect(std::int64_t sessionID);
+	bool SendPacket(std::int64_t sessionID, CPacket packet);
+	void PostQueueContentsShutDown(std::int32_t contentsnum);
 
 	int GetSessionCount();
 	unsigned long long GetAcceptTotal();
@@ -110,17 +119,17 @@ public:
 	int GetSendMessageTPS();
 	unsigned long GetSBufferCapacity();
 	unsigned long GetSBufferUsingCount();
-	unsigned long GetContentsFPS(__int32 contentsnum);
-	unsigned long GetContentsLogic(__int32 contentsnum);
+	unsigned long GetContentsFPS(std::int32_t contentsnum);
+	unsigned long GetContentsLogic(std::int32_t contentsnum);
 
 
-	void RegisterContents(__int32 contentsnum, Contents* contents);
-	void DeregisterContents(__int32 contentsnum);
+	void RegisterContents(std::int32_t contentsnum, Contents* contents);
+	void DeregisterContents(std::int32_t contentsnum);
 
-	void SetDefaultContents(__int32 contentsnum);
-	void InsertToContents(__int64 sessionID, __int32 contentsnum);
-	void DeleteFromContents(__int64 sessionID, __int32 contentsnum);
-	bool SetContentsNum(__int64 sessionID, __int32 contentsnum);
+	void SetDefaultContents(std::int32_t contentsnum);
+	void InsertToContents(std::int64_t sessionID, std::int32_t contentsnum);
+	void DeleteFromContents(std::int64_t sessionID, std::int32_t contentsnum);
+	bool SetContentsNum(std::int64_t sessionID, std::int32_t contentsnum);
 
 	void AttachStub(IStub* stub);
 	IStub* DetachStub();
@@ -139,10 +148,10 @@ private:
 	void CheckAllCoreStopped();
 
 protected:
-	virtual bool OnConnectionRequest(SOCKADDR_IN* clientaddr) = 0;
-	virtual void OnAccept(SOCKADDR_IN* clientaddr, __int64 sessionID) = 0;
-	virtual void OnRelease(__int64 sessionID, __int32 contentsnum) = 0;
-	virtual void OnUnusual(__int64 sessionID, SOCKADDR_IN clientaddr) = 0;
+	virtual bool OnConnectionRequest(const SOCKADDR_IN& clientaddr) = 0;
+	virtual void OnAccept(const SOCKADDR_IN& clientaddr, std::int64_t sessionID) = 0;
+	virtual void OnRelease(std::int64_t sessionID, std::int32_t contentsnum) = 0;
+	virtual void OnUnusual(std::int64_t sessionID, const SOCKADDR_IN& clientaddr) = 0;
 	virtual void OnSecond() = 0;
 	
 
@@ -169,7 +178,7 @@ private:
 	//////////////////////////////////////////////////////////////////////
 
 	//AcceptThread가 쓰는 함수들
-	int FindSession(__int64 tgtID);
+	int FindSession(std::int64_t tgtID);
 
 private:
 	//직렬화버퍼 헤더 세팅
@@ -189,14 +198,14 @@ private:
 	long _recvCount = 0;
 	long _sendMessageTPS = 0;
 	long _sendCount = 0;
-	__int64 _sessionKey = 1;
+	std::int64_t _sessionKey = 1;
 
 
 private:
-	long _coreState = CORE_CREATED;
+	CoreServerState _coreState = CoreServerState::CORE_CREATED;
 	SOCKET _listenSock;
 	HANDLE _hcp;
-	SESSION* _sessionArray;
+	std::unique_ptr<SESSION[]> _sessionArray;
 	DWORD _sessionCount;
 
 	HANDLE _acceptThread;
@@ -213,12 +222,12 @@ private:
 	LFStack<int> _indexArray;
 
 private:
-	std::unordered_map<__int32, Contents*> _contentsMap;
+	std::unordered_map<std::int32_t, Contents*> _contentsMap;		// non-owning; lifetime managed by owner (e.g., FighterServer or pool)
 	SRWLOCK _mapKey;
 	friend class Contents;
 
 private:
-	unsigned char _type;
+	ServerType _type;
 	SOCKADDR_IN _serverAddr;
 	int _workerThread;
 	int _concurrent;
@@ -228,7 +237,7 @@ private:
 	int _initialTime;
 	int _regularTime;
 
-	__int32 _defaultContents = -1;
+	std::int32_t _defaultContents = -1;
 
 private:
 	IStub* _stub = nullptr;

@@ -37,6 +37,11 @@ public:
 		{
 		}
 	}
+	MAXLFQueue(const MAXLFQueue&) = delete;
+	MAXLFQueue& operator=(const MAXLFQueue&) = delete;
+	MAXLFQueue(MAXLFQueue&&) = delete;
+	MAXLFQueue& operator=(MAXLFQueue&&) = delete;
+
 	__forceinline bool Enqueue(DATA data)
 	{
 

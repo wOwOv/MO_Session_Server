@@ -22,7 +22,7 @@ public:
 	virtual void ProcFightDefault(__int64 sessionID, CPacket packet)override;
 
 private:
-	void AttackPlayer(const Player* player, unsigned char type);
+	void AttackPlayer(const Player& player, unsigned char type);
 
 private:
 };
