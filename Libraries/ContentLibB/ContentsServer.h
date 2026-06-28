@@ -12,11 +12,14 @@
 #include "LockFreeStack.h"
 #include <shared_mutex>
 
-#define CPACKETBOXMAX 500
+static constexpr int CPACKET_BOX_MAX = 500;
 
-#define LANSERVER 2
-#define NETSERVER 5
-
+//#define LANSERVER 2
+//#define NETSERVER 5
+enum class ServerType : unsigned char {
+	LANSERVER = 2,
+	NETSERVER = 5
+};
 
 class Contents;
 
@@ -25,7 +28,7 @@ class ContentsServer
 	static constexpr long RELEASEFLAG = 0x80000000;
 
 private:
-	enum CoreServerState
+	enum class CoreServerState: std::uint8_t
 	{
 		CORE_CREATED = 0,  // Start 전
 		CORE_RUNNING = 1,  // Start 성공 후 동작 중
@@ -55,7 +58,7 @@ private:
 	};
 	struct PacketBox
 	{
-		SBuffer* _SBufferArray[CPACKETBOXMAX];
+		SBuffer* _SBufferArray[CPACKET_BOX_MAX];
 		int _count;
 	};
 
@@ -91,7 +94,7 @@ private:
 
 public:
 
-	ContentsServer(unsigned char type = LANSERVER);
+	ContentsServer(ServerType type = ServerType::LANSERVER);
 	virtual ~ContentsServer();
 
 	virtual void ServerControl();
@@ -193,7 +196,7 @@ private:
 
 
 private:
-	long _coreState = CORE_CREATED;
+	CoreServerState _coreState = CoreServerState::CORE_CREATED;
 	SOCKET _listenSock;
 	HANDLE _hcp;
 	SESSION* _sessionArray;
@@ -218,7 +221,7 @@ private:
 	friend class Contents;
 
 private:
-	unsigned char _type;
+	ServerType _type;
 	SOCKADDR_IN _serverAddr;
 	int _workerThread;
 	int _concurrent;

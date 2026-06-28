@@ -17,7 +17,7 @@ class FighterServer:public ContentsServer
 	friend class MatchContents;
 	friend class FightContents;
 private:
-	enum ServerState
+	enum ServerState : std::uint8_t
 	{
 		SERVER_CREATED = 0, 
 		SERVER_RUNNING = 1,
@@ -88,7 +88,7 @@ private:
 
 private:
 	bool _shutDown = false;
-	std::atomic<int> _state=SERVER_CREATED;
+	std::atomic<ServerState> _state= ServerState::SERVER_CREATED;
 
 	//MatchContents
 	MatchContents* _matchContents = nullptr;

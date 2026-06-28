@@ -9,7 +9,7 @@
 #include "Logger.h"
 #include <conio.h>
 
-ContentsServer::ContentsServer(unsigned char type) : _type(type)
+ContentsServer::ContentsServer(ServerType type) : _type(type)
 {
 	timeBeginPeriod(1);
 	LOG(L"SYSTEM",LVSYSTEM,L"ContentsServer Created");
@@ -73,22 +73,22 @@ void ContentsServer::ShowServerInfo()
 {
 	switch (_coreState)
 	{
-	case(CORE_CREATED):
+	case(CoreServerState::CORE_CREATED):
 	{
 		printf("Core State : CORE_CREATED\n");
 		break;
 	}
-	case(CORE_RUNNING):
+	case(CoreServerState::CORE_RUNNING):
 	{
 		printf("Core State : CORE_RUNNING\n");
 		break;
 	}
-	case(CORE_STOPPING):
+	case(CoreServerState::CORE_STOPPING):
 	{
 		printf("Core State : CORE_STOPPING\n");
 		break;
 	}
-	case(CORE_STOPPED):
+	case(CoreServerState:: CORE_STOPPED):
 	{
 		printf("Core State : CORE_STOPPED\n");
 		break;
@@ -106,14 +106,14 @@ bool ContentsServer::Start(const char* txtname, char code, char key)
 	Setting(code, key);
 	Network();
 
-	_coreState = CORE_RUNNING;
+	_coreState = CoreServerState::CORE_RUNNING;
 	LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer Running");
 	return 1;
 }
 
 void ContentsServer::Stop()
 {
-	_coreState = CORE_STOPPING;
+	_coreState = CoreServerState::CORE_STOPPING;
 	StopAcceptThread();
 	StopWorkerThread();
 	StopTimeOutThread();
@@ -126,7 +126,7 @@ void ContentsServer::Stop()
 		scretval = WSAGetLastError();
 		printf("cleanup error: %d\n", scretval);
 	}
-	_coreState = CORE_STOPPED;
+	_coreState = CoreServerState::CORE_STOPPED;
 }
 
 
@@ -194,7 +194,7 @@ bool ContentsServer::SendPacket(__int64 sessionID, CPacket packet) {
 				if (msgbuf->eFlag == 0)
 				{
 					SetBufferHeader(msgbuf);
-					if (_type == NETSERVER)
+					if (_type == ServerType::NETSERVER)
 					{
 						Encode(msgbuf);
 					}
@@ -405,7 +405,7 @@ IProxy* ContentsServer::DetachProxy()
 
 void ContentsServer::StopAcceptThread()
 {
-	_coreState = CORE_STOPPING;
+	_coreState = CoreServerState::CORE_STOPPING;
 	//listendsocket을 닫아서 Acceptthread리턴 유도
 	closesocket(_listenSock);
 	WaitForSingleObject(_acceptThread, INFINITE);
@@ -421,7 +421,7 @@ void ContentsServer::StopTimeOutThread()
 	//타임아웃스레드 생성시
 	if (_timeoutVal == 1)
 	{
-		_coreState = CORE_STOPPING;
+		_coreState = CoreServerState::CORE_STOPPING;
 		_timeOutThreadStop = TRUE;
 		WaitForSingleObject(_timeOutThread, INFINITE);
 		CloseHandle(_timeOutThread);
@@ -434,7 +434,7 @@ void ContentsServer::StopTimeOutThread()
 
 void ContentsServer::StopMonitorThread()
 {
-	_coreState = CORE_STOPPING;
+	_coreState = CoreServerState::CORE_STOPPING;
 	_monitorThreadStop = TRUE;
 	WaitForSingleObject(_monitorThread, INFINITE);
 	CloseHandle(_monitorThread);
@@ -446,7 +446,7 @@ void ContentsServer::StopMonitorThread()
 
 void ContentsServer::StopWorkerThread()
 {
-	_coreState = CORE_STOPPING;
+	_coreState = CoreServerState::CORE_STOPPING;
 	//워커스레드 리턴을 위한 PQCS
 	ULONG_PTR p = 0;
 	LPOVERLAPPED po = nullptr;
@@ -489,7 +489,7 @@ void ContentsServer::CheckAllCoreStopped()
 	{
 		return;
 	}
-	_coreState = CORE_STOPPED;
+	_coreState = CoreServerState::CORE_STOPPED;
 	LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer All Core Stopped");
 }
 
@@ -1142,7 +1142,7 @@ void ContentsServer::RecvCompletion(SESSION* tgt, DWORD cbTransferred)
 
 	if (tgt->_contentsNum == 0)						//지정된 스레드 없음
 	{
-		if (_type == LANSERVER)
+		if (_type == ServerType::LANSERVER)
 		{
 			while (1)
 			{
@@ -1187,7 +1187,7 @@ void ContentsServer::RecvCompletion(SESSION* tgt, DWORD cbTransferred)
 				msgbuf->DecRefcnt();
 			}
 		}
-		if (_type == NETSERVER)
+		if (_type == ServerType::NETSERVER)
 		{
 			while (1)
 			{
@@ -1284,7 +1284,7 @@ void ContentsServer::RecvCompletion(SESSION* tgt, DWORD cbTransferred)
 
 			//recv 후 처리
 			//header만큼 들어왔는지 확인
-			if (_type == LANSERVER)
+			if (_type == ServerType::LANSERVER)
 			{
 				while (1)
 				{
@@ -1331,7 +1331,7 @@ void ContentsServer::RecvCompletion(SESSION* tgt, DWORD cbTransferred)
 				}
 			}
 
-			if (_type == NETSERVER)
+			if (_type == ServerType::NETSERVER)
 			{
 				while (1)
 				{
@@ -1418,7 +1418,7 @@ void ContentsServer::RecvCompletion(SESSION* tgt, DWORD cbTransferred)
 	}
 	else                           //contentsNum==-1 이동중이므로 메시지 무시
 	{
-		if (_type == LANSERVER)
+		if (_type == ServerType::LANSERVER)
 		{
 			while (1)
 			{
@@ -1444,7 +1444,7 @@ void ContentsServer::RecvCompletion(SESSION* tgt, DWORD cbTransferred)
 				tgt->_recvQ.MoveFront(header._len + sizeof(LanHEADER));
 			}
 		}
-		if (_type == NETSERVER)
+		if (_type == ServerType::NETSERVER)
 		{
 			while (1)
 			{
@@ -1588,7 +1588,7 @@ bool ContentsServer::SendPost(SESSION* tgt)
 		{
 			if (InterlockedExchange(&tgt->_sendFlag, 1) == 0)
 			{
-				WSABUF wsabuf[CPACKETBOXMAX];
+				WSABUF wsabuf[CPACKET_BOX_MAX];
 				DWORD sendbytes = 0;
 				DWORD sendflags = 0;
 
@@ -1606,7 +1606,7 @@ bool ContentsServer::SendPost(SESSION* tgt)
 				}
 
 				int size = 0;
-				for (size; size < CPACKETBOXMAX; size++)
+				for (size; size < CPACKET_BOX_MAX; size++)
 				{
 					bool check = tgt->_sendQ.Dequeue(&tgt->_packetBox._SBufferArray[size]);
 					if (check == false)
@@ -1680,7 +1680,7 @@ int ContentsServer::FindSession(__int64 tgtID)
 
 void ContentsServer::SetBufferHeader(SBuffer* msgbuf)
 {
-	if (_type == LANSERVER)
+	if (_type == ServerType::LANSERVER)
 	{
 		LanHEADER header;
 		header._code = 0x89;
@@ -1691,7 +1691,7 @@ void ContentsServer::SetBufferHeader(SBuffer* msgbuf)
 		*temp = header;
 	}
 
-	if (_type == NETSERVER)
+	if (_type == ServerType::NETSERVER)
 	{
 		srand((unsigned int)GetTickCount64());
 
