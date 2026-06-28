@@ -12,7 +12,7 @@ void StubForFight::ProcCSMoveStart(__int64 sessionID, unsigned char dir, unsigne
 {
 	Player* player = nullptr;
 	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != ((FightContents*)_contents)->_playerMap.end())
+	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
 	{
 		player = it->second;
 	}
@@ -48,7 +48,7 @@ void StubForFight::ProcCSMoveStart(__int64 sessionID, unsigned char dir, unsigne
 		__int64 sessionA[6];
 		int count = 0;
 		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 		{
 			if (cit->first != sessionID)
 			{
@@ -56,7 +56,7 @@ void StubForFight::ProcCSMoveStart(__int64 sessionID, unsigned char dir, unsigne
 				count++;
 			}
 		}
-		((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCMoveStart(sessionA, count, player->_id,dir, x, y);
+		static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCMoveStart(sessionA, count, player->_id,dir, x, y);
 
 	}
 }
@@ -65,7 +65,7 @@ void StubForFight::ProcCSMoveStop(__int64 sessionID, unsigned char dir, unsigned
 {
 	Player* player = nullptr;
 	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != ((FightContents*)_contents)->_playerMap.end())
+	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
 	{
 		player = it->second;
 	}
@@ -102,7 +102,7 @@ void StubForFight::ProcCSMoveStop(__int64 sessionID, unsigned char dir, unsigned
 		__int64 sessionA[6];
 		int count = 0;
 		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 		{
 			if (cit->first != sessionID)
 			{
@@ -110,7 +110,7 @@ void StubForFight::ProcCSMoveStop(__int64 sessionID, unsigned char dir, unsigned
 				count++;
 			}
 		}
-		((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCMoveStop(sessionA, count, player->_id,dir, x, y);
+		(static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy))->ProxySCMoveStop(sessionA, count, player->_id,dir, x, y);
 
 	}
 }
@@ -119,7 +119,7 @@ void StubForFight::ProcCSAttack1(__int64 sessionID, unsigned char dir, unsigned 
 {
 	Player* player = nullptr;
 	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != ((FightContents*)_contents)->_playerMap.end())
+	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
 	{
 		player = it->second;
 	}
@@ -142,7 +142,7 @@ void StubForFight::ProcCSAttack1(__int64 sessionID, unsigned char dir, unsigned 
 		__int64 sessionA[6];
 		int count = 0;
 		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 		{
 			if (cit->first != sessionID)
 			{
@@ -150,7 +150,7 @@ void StubForFight::ProcCSAttack1(__int64 sessionID, unsigned char dir, unsigned 
 				count++;
 			}
 		}
-		((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCAttack1(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
+		static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack1(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
 
 		//单固瘤贸府
 		AttackPlayer(*player, CSATTACK1);
@@ -161,7 +161,7 @@ void StubForFight::ProcCSAttack2(__int64 sessionID, unsigned char dir, unsigned 
 {
 	Player* player = nullptr;
 	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != ((FightContents*)_contents)->_playerMap.end())
+	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
 	{
 		player = it->second;
 	}
@@ -184,7 +184,7 @@ void StubForFight::ProcCSAttack2(__int64 sessionID, unsigned char dir, unsigned 
 		__int64 sessionA[6];
 		int count = 0;
 		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 		{
 			if (cit->first != sessionID)
 			{
@@ -192,7 +192,7 @@ void StubForFight::ProcCSAttack2(__int64 sessionID, unsigned char dir, unsigned 
 				count++;
 			}
 		}
-		((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCAttack2(sessionA, count, player->_id,player->_direction, player->_x, player->_y);
+		static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack2(sessionA, count, player->_id,player->_direction, player->_x, player->_y);
 
 		//单固瘤贸府
 		AttackPlayer(*player, CSATTACK2);
@@ -204,7 +204,7 @@ void StubForFight::ProcCSAttack3(__int64 sessionID, unsigned char dir, unsigned 
 {
 	Player* player = nullptr;
 	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != ((FightContents*)_contents)->_playerMap.end())
+	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
 	{
 		player = it->second;
 	}
@@ -227,7 +227,7 @@ void StubForFight::ProcCSAttack3(__int64 sessionID, unsigned char dir, unsigned 
 		__int64 sessionA[6];
 		int count = 0;
 		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 		{
 			if (cit->first != sessionID)
 			{
@@ -235,7 +235,7 @@ void StubForFight::ProcCSAttack3(__int64 sessionID, unsigned char dir, unsigned 
 				count++;
 			}
 		}
-		((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCAttack3(sessionA, count, player->_id,player->_direction, player->_x, player->_y);
+		static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack3(sessionA, count, player->_id,player->_direction, player->_x, player->_y);
 
 		//单固瘤贸府
 		AttackPlayer(*player, CSATTACK3);
@@ -252,7 +252,7 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 {
 	Player* tgt = nullptr;
 	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.begin();
-	for (; it != ((FightContents*)_contents)->_playerMap.end(); it++)
+	for (; it != static_cast<FightContents*>(_contents)->_playerMap.end(); it++)
 	{
 		tgt = it->second;
 
@@ -281,12 +281,12 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 						__int64 sessionA[6];
 						int count = 0;
 						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 						{
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
@@ -308,12 +308,12 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 						__int64 sessionA[6];
 						int count = 0;
 						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 						{
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
@@ -340,12 +340,12 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 						__int64 sessionA[6];
 						int count = 0;
 						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 						{
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
@@ -369,12 +369,12 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 						__int64 sessionA[6];
 						int count = 0;
 						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 						{
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
@@ -400,12 +400,12 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 						__int64 sessionA[6];
 						int count = 0;
 						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 						{
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
@@ -428,12 +428,12 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 						__int64 sessionA[6];
 						int count = 0;
 						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != ((FightContents*)_contents)->_playerMap.end(); cit++)
+						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 						{
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}

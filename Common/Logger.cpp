@@ -1,7 +1,6 @@
 #include "Logger.h"
 #include <strsafe.h>
 #include <chrono>
-#include <mutex>
 #include <windows.h>
 
 

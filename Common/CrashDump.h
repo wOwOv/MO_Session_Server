@@ -49,7 +49,7 @@ public:
 
 		hProcess = GetCurrentProcess();
 
-		if (NULL == hProcess)
+		if (nullptr == hProcess)
 		{
 			return 0;
 		}

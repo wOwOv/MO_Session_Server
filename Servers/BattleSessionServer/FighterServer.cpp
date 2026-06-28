@@ -1,5 +1,4 @@
 #include "FighterServer.h"
-#include "FighterStructure.h"
 #include "DBConnector.h"
 #include "BattleDB.h"
 #include <thread>

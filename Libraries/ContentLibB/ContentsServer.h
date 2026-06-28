@@ -11,6 +11,7 @@
 #include "Contents.h"
 #include "LockFreeStack.h"
 #include <shared_mutex>
+#include <cstdint>
 
 static constexpr int CPACKET_BOX_MAX = 500;
 
@@ -72,12 +73,12 @@ private:
 
 		SOCKET _sock;
 		IN_ADDR _ip;
-		u_short _port;
+		std::uint16_t _port;
 
 		ULONGLONG _time = 0;
 		bool _firstRecv = 0;
 
-		__int64 _sessionID;
+		std::int64_t _sessionID;
 
 		long _sendFlag = 0;
 
@@ -85,11 +86,11 @@ private:
 
 		long _dFlag = 0;		//disconnect flag
 
-		__int32 _msgCount = 0;
+		std::int32_t _msgCount = 0;
 
 		PacketBox _packetBox;
 
-		__int32 _contentsNum=0;//0: 처음들어옴,-1: 이동중
+		std::int32_t _contentsNum=0;//0: 처음들어옴,-1: 이동중
 	};
 
 public:
@@ -107,9 +108,9 @@ public:
 
 	bool Start(const char* txtname, char code = 0, char key = 0);
 	virtual void Stop();
-	bool Disconnect(__int64 sessionID);
-	bool SendPacket(__int64 sessionID, CPacket packet);
-	void PostQueueContentsShutDown(__int32 contentsnum);
+	bool Disconnect(std::int64_t sessionID);
+	bool SendPacket(std::int64_t sessionID, CPacket packet);
+	void PostQueueContentsShutDown(std::int32_t contentsnum);
 
 	int GetSessionCount();
 	unsigned long long GetAcceptTotal();
@@ -118,17 +119,17 @@ public:
 	int GetSendMessageTPS();
 	unsigned long GetSBufferCapacity();
 	unsigned long GetSBufferUsingCount();
-	unsigned long GetContentsFPS(__int32 contentsnum);
-	unsigned long GetContentsLogic(__int32 contentsnum);
+	unsigned long GetContentsFPS(std::int32_t contentsnum);
+	unsigned long GetContentsLogic(std::int32_t contentsnum);
 
 
-	void RegisterContents(__int32 contentsnum, Contents* contents);
-	void DeregisterContents(__int32 contentsnum);
+	void RegisterContents(std::int32_t contentsnum, Contents* contents);
+	void DeregisterContents(std::int32_t contentsnum);
 
-	void SetDefaultContents(__int32 contentsnum);
-	void InsertToContents(__int64 sessionID, __int32 contentsnum);
-	void DeleteFromContents(__int64 sessionID, __int32 contentsnum);
-	bool SetContentsNum(__int64 sessionID, __int32 contentsnum);
+	void SetDefaultContents(std::int32_t contentsnum);
+	void InsertToContents(std::int64_t sessionID, std::int32_t contentsnum);
+	void DeleteFromContents(std::int64_t sessionID, std::int32_t contentsnum);
+	bool SetContentsNum(std::int64_t sessionID, std::int32_t contentsnum);
 
 	void AttachStub(IStub* stub);
 	IStub* DetachStub();
@@ -148,9 +149,9 @@ private:
 
 protected:
 	virtual bool OnConnectionRequest(const SOCKADDR_IN& clientaddr) = 0;
-	virtual void OnAccept(const SOCKADDR_IN& clientaddr, __int64 sessionID) = 0;
-	virtual void OnRelease(__int64 sessionID, __int32 contentsnum) = 0;
-	virtual void OnUnusual(__int64 sessionID, const SOCKADDR_IN& clientaddr) = 0;
+	virtual void OnAccept(const SOCKADDR_IN& clientaddr, std::int64_t sessionID) = 0;
+	virtual void OnRelease(std::int64_t sessionID, std::int32_t contentsnum) = 0;
+	virtual void OnUnusual(std::int64_t sessionID, const SOCKADDR_IN& clientaddr) = 0;
 	virtual void OnSecond() = 0;
 	
 
@@ -177,7 +178,7 @@ private:
 	//////////////////////////////////////////////////////////////////////
 
 	//AcceptThread가 쓰는 함수들
-	int FindSession(__int64 tgtID);
+	int FindSession(std::int64_t tgtID);
 
 private:
 	//직렬화버퍼 헤더 세팅
@@ -197,7 +198,7 @@ private:
 	long _recvCount = 0;
 	long _sendMessageTPS = 0;
 	long _sendCount = 0;
-	__int64 _sessionKey = 1;
+	std::int64_t _sessionKey = 1;
 
 
 private:
@@ -221,7 +222,7 @@ private:
 	LFStack<int> _indexArray;
 
 private:
-	std::unordered_map<__int32, Contents*> _contentsMap;		// non-owning; lifetime managed by owner (e.g., FighterServer or pool)
+	std::unordered_map<std::int32_t, Contents*> _contentsMap;		// non-owning; lifetime managed by owner (e.g., FighterServer or pool)
 	SRWLOCK _mapKey;
 	friend class Contents;
 
@@ -236,7 +237,7 @@ private:
 	int _initialTime;
 	int _regularTime;
 
-	__int32 _defaultContents = -1;
+	std::int32_t _defaultContents = -1;
 
 private:
 	IStub* _stub = nullptr;

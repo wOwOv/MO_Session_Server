@@ -28,7 +28,7 @@ void MatchContents::DisconnectAllPlayer()
 	{
 		if (CheckStopRequested())
 		{
-			FighterServer* server = (FighterServer*)_mServer;
+			FighterServer* server = static_cast<FighterServer*>(_mServer);
 			Control* control = server->_controlPool.Alloc();
 			control->_type = CONTROLTYPE::MATCHDEREGISTER;
 			server->_ctrlQ.Enqueue(control);
@@ -47,7 +47,7 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 		return;
 	}
 
-	FighterServer* server = (FighterServer*)_mServer;
+	FighterServer* server = static_cast<FighterServer*>(_mServer);
 	ReadLock lock(server->_playerMutex);
 	Player* player;
 	std::unordered_map<SessionID, Player*>::iterator it = server->_playerMap.find(sessionID);
@@ -93,7 +93,7 @@ void MatchContents::OnLeave(__int64 sessionID, void* extra)
 	_playerMap.erase(sessionID);
 	if(CheckStopRequested())
 	{
-		FighterServer* server = (FighterServer*)_mServer;
+		FighterServer* server = static_cast<FighterServer*>(_mServer);
 		Control* control = server->_controlPool.Alloc();
 		control->_type = CONTROLTYPE::MATCHDEREGISTER;
 		server->_ctrlQ.Enqueue(control);
@@ -140,7 +140,7 @@ FightContents::~FightContents()
 
 void FightContents::OnEnter(__int64 sessionID, void* extra)
 {
-	FighterServer* server = (FighterServer*)_mServer;
+	FighterServer* server = static_cast<FighterServer*>(_mServer);
 	ReadLock lock(server->_playerMutex);
 	Player* player;
 	std::unordered_map<SessionID, Player*>::iterator it = server->_playerMap.find(sessionID);
