@@ -54,20 +54,20 @@ void FighterServer::Stop()
 }
 
 
-bool FighterServer::OnConnectionRequest(SOCKADDR_IN* clientaddr)
+bool FighterServer::OnConnectionRequest(const SOCKADDR_IN& clientaddr)
 {
-	if (_banSet.find(*clientaddr) != _banSet.end())
+	if (_banSet.find(clientaddr) != _banSet.end())
 	{
 		return false;
 	}
 	return true;
 }
 
-void FighterServer::OnAccept(SOCKADDR_IN* clientaddr, __int64 sessionID)
+void FighterServer::OnAccept(const SOCKADDR_IN& clientaddr, __int64 sessionID)
 {
 	Player* player = _playerPool.Alloc();
 	player->_sessionID = sessionID;
-	player->_clientAddr = *clientaddr;
+	player->_clientAddr = clientaddr;
 	WriteLock lock(_playerMutex);
 	_playerMap.insert(std::make_pair(sessionID, player));
 }
@@ -87,7 +87,7 @@ void FighterServer::OnRelease(__int64 sessionID, __int32 contentsnum)
 
 }
 
-void FighterServer::OnUnusual(__int64 sessionID, SOCKADDR_IN clientaddr)
+void FighterServer::OnUnusual(__int64 sessionID, const SOCKADDR_IN& clientaddr)
 {
 	WriteLock lock(_banMutex);
 	_banSet.insert(clientaddr);
@@ -371,11 +371,11 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 	return 1;
 }
 
-void FighterServer::PushDBRequest(const DBRequest& request)
+void FighterServer::PushDBRequest(DBRequest request)
 {
 	{
 		std::lock_guard<std::mutex> lock(_dbMtx);
-		_dbQ.push(request);
+		_dbQ.push(std::move(request));
 	}
 
 	_dbCv.notify_one();

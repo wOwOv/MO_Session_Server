@@ -945,7 +945,7 @@ unsigned __stdcall ContentsServer::AcceptThread(LPVOID arg)
 			//소켓과 입출력 완료 포트 연결
 			CreateIoCompletionPort((HANDLE)tgt->_sock, coreserver->_hcp, (ULONG_PTR)tgt, 0);
 
-			coreserver->OnAccept(&clientaddr, tgt->_sessionID);
+			coreserver->OnAccept(clientaddr, tgt->_sessionID);
 			if (tgt->_contentsNum != 0)
 			{
 				SRWSharedLockGuard mapGuard(coreserver->_mapKey);

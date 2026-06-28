@@ -147,10 +147,10 @@ private:
 	void CheckAllCoreStopped();
 
 protected:
-	virtual bool OnConnectionRequest(SOCKADDR_IN* clientaddr) = 0;
-	virtual void OnAccept(SOCKADDR_IN* clientaddr, __int64 sessionID) = 0;
+	virtual bool OnConnectionRequest(const SOCKADDR_IN& clientaddr) = 0;
+	virtual void OnAccept(const SOCKADDR_IN& clientaddr, __int64 sessionID) = 0;
 	virtual void OnRelease(__int64 sessionID, __int32 contentsnum) = 0;
-	virtual void OnUnusual(__int64 sessionID, SOCKADDR_IN clientaddr) = 0;
+	virtual void OnUnusual(__int64 sessionID, const SOCKADDR_IN& clientaddr) = 0;
 	virtual void OnSecond() = 0;
 	
 

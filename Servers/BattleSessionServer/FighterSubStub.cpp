@@ -153,7 +153,7 @@ void StubForFight::ProcCSAttack1(__int64 sessionID, unsigned char dir, unsigned 
 		((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCAttack1(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
 
 		//데미지처리
-		AttackPlayer(player, CSATTACK1);
+		AttackPlayer(*player, CSATTACK1);
 	}
 }
 
@@ -195,7 +195,7 @@ void StubForFight::ProcCSAttack2(__int64 sessionID, unsigned char dir, unsigned 
 		((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCAttack2(sessionA, count, player->_id,player->_direction, player->_x, player->_y);
 
 		//데미지처리
-		AttackPlayer(player, CSATTACK2);
+		AttackPlayer(*player, CSATTACK2);
 
 	}
 }
@@ -238,7 +238,7 @@ void StubForFight::ProcCSAttack3(__int64 sessionID, unsigned char dir, unsigned 
 		((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCAttack3(sessionA, count, player->_id,player->_direction, player->_x, player->_y);
 
 		//데미지처리
-		AttackPlayer(player, CSATTACK3);
+		AttackPlayer(*player, CSATTACK3);
 
 	}
 }
@@ -248,7 +248,7 @@ void StubForFight::ProcFightDefault(__int64 sessionID, CPacket packet)
 	_server->Disconnect(sessionID);
 }
 
-void StubForFight::AttackPlayer(const Player* player, unsigned char type)
+void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 {
 	Player* tgt = nullptr;
 	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.begin();
@@ -256,7 +256,7 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 	{
 		tgt = it->second;
 
-		if (player->_team == tgt->_team)
+		if (player._team == tgt->_team)
 		{
 			continue;
 		}
@@ -266,11 +266,11 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 		{
 		case CSATTACK1:
 		{
-			if (player->_direction == dfPACKET_MOVE_DIR_LL)
+			if (player._direction == dfPACKET_MOVE_DIR_LL)
 			{
-				if (tgt->_x <= player->_x)
+				if (tgt->_x <= player._x)
 				{
-					if ((player->_x - tgt->_x) < dfATTACK1_RANGE_X && abs(player->_y - tgt->_y) < dfATTACK1_RANGE_Y)
+					if ((player._x - tgt->_x) < dfATTACK1_RANGE_X && abs(player._y - tgt->_y) < dfATTACK1_RANGE_Y)
 					{
 						//hp처리 후 메시지 만들어 전체 send
 						tgt->_hp -= ATTACK1DMG;
@@ -286,17 +286,17 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player->_id, tgt->_id, tgt->_hp);
+						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
 			}
-			else if (player->_direction == dfPACKET_MOVE_DIR_RR)
+			else if (player._direction == dfPACKET_MOVE_DIR_RR)
 			{
 
-				if (tgt->_x >= player->_x)
+				if (tgt->_x >= player._x)
 				{
-					if ((tgt->_x - player->_x) < dfATTACK1_RANGE_X && abs(tgt->_y - player->_y) < dfATTACK1_RANGE_Y)
+					if ((tgt->_x - player._x) < dfATTACK1_RANGE_X && abs(tgt->_y - player._y) < dfATTACK1_RANGE_Y)
 					{
 						//_hp처리 후 메시지 만들어 전체 send
 						tgt->_hp -= ATTACK1DMG;
@@ -313,7 +313,7 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player->_id, tgt->_id, tgt->_hp);
+						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
@@ -322,12 +322,12 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 		}
 		case CSATTACK2:
 		{
-			if (player->_direction == dfPACKET_MOVE_DIR_LL)
+			if (player._direction == dfPACKET_MOVE_DIR_LL)
 			{
 
-				if (tgt->_x <= player->_x)
+				if (tgt->_x <= player._x)
 				{
-					if ((player->_x - tgt->_x) < dfATTACK2_RANGE_X && abs(player->_y - tgt->_y) < dfATTACK2_RANGE_Y)
+					if ((player._x - tgt->_x) < dfATTACK2_RANGE_X && abs(player._y - tgt->_y) < dfATTACK2_RANGE_Y)
 					{
 						//_hp처리 후 메시지 만들어 전체 send
 						tgt->_hp -= ATTACK2DMG;
@@ -345,18 +345,18 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player->_id, tgt->_id, tgt->_hp);
+						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
 
 			}
-			else if (player->_direction == dfPACKET_MOVE_DIR_RR)
+			else if (player._direction == dfPACKET_MOVE_DIR_RR)
 			{
 
-				if (tgt->_x >= player->_x)
+				if (tgt->_x >= player._x)
 				{
-					if ((tgt->_x - player->_x) < dfATTACK2_RANGE_X && abs(tgt->_y - player->_y) < dfATTACK2_RANGE_Y)
+					if ((tgt->_x - player._x) < dfATTACK2_RANGE_X && abs(tgt->_y - player._y) < dfATTACK2_RANGE_Y)
 					{
 						//_hp처리 후 메시지 만들어 전체 send
 						tgt->_hp -= ATTACK2DMG;
@@ -374,7 +374,7 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player->_id, tgt->_id, tgt->_hp);
+						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
@@ -383,11 +383,11 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 		}
 		case CSATTACK3:
 		{
-			if (player->_direction == dfPACKET_MOVE_DIR_LL)
+			if (player._direction == dfPACKET_MOVE_DIR_LL)
 			{
-				if (tgt->_x <= player->_x)
+				if (tgt->_x <= player._x)
 				{
-					if ((player->_x - tgt->_x) < dfATTACK3_RANGE_X && abs(player->_y - tgt->_y) < dfATTACK3_RANGE_Y)
+					if ((player._x - tgt->_x) < dfATTACK3_RANGE_X && abs(player._y - tgt->_y) < dfATTACK3_RANGE_Y)
 					{
 						//_hp처리 후 메시지 만들어 전체 send
 						tgt->_hp -= ATTACK3DMG;
@@ -405,17 +405,17 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player->_id, tgt->_id, tgt->_hp);
+						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}
 			}
-			else if (player->_direction == dfPACKET_MOVE_DIR_RR)
+			else if (player._direction == dfPACKET_MOVE_DIR_RR)
 			{
 
-				if (tgt->_x >= player->_x)
+				if (tgt->_x >= player._x)
 				{
-					if ((tgt->_x - player->_x) < dfATTACK3_RANGE_X && abs(tgt->_y - player->_y) < dfATTACK3_RANGE_Y)
+					if ((tgt->_x - player._x) < dfATTACK3_RANGE_X && abs(tgt->_y - player._y) < dfATTACK3_RANGE_Y)
 					{
 						//_hp처리 후 메시지 만들어 전체 send
 						tgt->_hp -= ATTACK3DMG;
@@ -433,7 +433,7 @@ void StubForFight::AttackPlayer(const Player* player, unsigned char type)
 							sessionA[count] = cit->first;
 							count++;
 						}
-						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player->_id, tgt->_id, tgt->_hp);
+						((FightProxy*)((FightContents*)_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
 						break;
 					}
 				}

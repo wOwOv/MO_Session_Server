@@ -48,10 +48,10 @@ public:
 	void StopControlThread();
 	void StopDBThread();
 
-	virtual bool OnConnectionRequest(SOCKADDR_IN* clientaddr) override;
-	virtual void OnAccept(SOCKADDR_IN* clientaddr, __int64 sessionID) override;
+	virtual bool OnConnectionRequest(const SOCKADDR_IN& clientaddr) override;
+	virtual void OnAccept(const SOCKADDR_IN& clientaddr, __int64 sessionID) override;
 	virtual void OnRelease(__int64 sessionID, __int32 contentsnum)override;
-	virtual void OnUnusual(__int64 sessionID, SOCKADDR_IN clientaddr) override;
+	virtual void OnUnusual(__int64 sessionID, const SOCKADDR_IN& clientaddr) override;
 	virtual void OnSecond() override;
 
 	int GetFightPoolCapacity();
@@ -74,7 +74,7 @@ private:
 	static unsigned __stdcall DBThread(LPVOID arg);
 
 private:
-	void PushDBRequest(const DBRequest& request);
+	void PushDBRequest(DBRequest request);
 	bool WaitAndPopDBRequest(DBRequest& outrequest);
 
 private:
