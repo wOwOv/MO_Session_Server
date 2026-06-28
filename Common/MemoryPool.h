@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <vector>
 #include <memory>
+#include <mutex>
 
 static int key = 0xaaaa;
 

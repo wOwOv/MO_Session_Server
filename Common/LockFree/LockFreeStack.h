@@ -51,7 +51,7 @@ public:
 		Node* realadr;
 		unsigned long long tempadr;
 
-		unsigned long long ssize = InterlockedDecrement(&_size);
+		long ssize = InterlockedDecrement(&_size);
 		if (ssize < 0)
 		{
 			InterlockedIncrement(&_size);
@@ -84,7 +84,7 @@ public:
 
 private:
 	Node* _top;
-	unsigned long long _size;
+	long _size;
 	short _key= 0;
 	TlsMemoryPool<Node> _nodepool;
 };

@@ -18,8 +18,8 @@ ContentsServer::ContentsServer(unsigned char type) : _type(type)
 
 ContentsServer::~ContentsServer()
 {
-	delete _sessionArray;
-	timeEndPeriod(1);
+	delete[] _sessionArray;
+	CloseHandle(_hcp);
 }
 
 void ContentsServer::ServerControl()
