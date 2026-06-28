@@ -200,7 +200,7 @@ void FighterServer::RequestStopMatchContents()
 void FighterServer::StopControlThread()
 {
 	{
-		std::lock_guard<std::mutex> lock(_dbMtx);
+		std::lock_guard<std::mutex> lock(_ctrlMtx);
 		_ctrlThreadRun.store(false);
 	}
 
