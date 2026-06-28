@@ -20,7 +20,7 @@ private:
 
 private:
 	std::atomic<bool> _stopRequested = false;
-	std::unordered_map<SessionID, Player* > _playerMap;
+	std::unordered_map<SessionID, Player* > _playerMap;// non-owning; Player lifetime is managed by FighterServer::_playerPool
 
 };
 
@@ -40,7 +40,7 @@ public:
 	bool CheckGameEnd();
 
 private:
-	std::unordered_map<SessionID, Player* > _playerMap;
+	std::unordered_map<SessionID, Player* > _playerMap;// non-owning; Player lifetime is managed by FighterServer::_playerPool
 	SessionID _red[3];
 	SessionID _blue[3];
 	__int64 _matchID = 0;

@@ -204,7 +204,7 @@ private:
 	CoreServerState _coreState = CoreServerState::CORE_CREATED;
 	SOCKET _listenSock;
 	HANDLE _hcp;
-	SESSION* _sessionArray;
+	std::unique_ptr<SESSION[]> _sessionArray;
 	DWORD _sessionCount;
 
 	HANDLE _acceptThread;
@@ -221,7 +221,7 @@ private:
 	LFStack<int> _indexArray;
 
 private:
-	std::unordered_map<__int32, Contents*> _contentsMap;
+	std::unordered_map<__int32, Contents*> _contentsMap;		// non-owning; lifetime managed by owner (e.g., FighterServer or pool)
 	SRWLOCK _mapKey;
 	friend class Contents;
 

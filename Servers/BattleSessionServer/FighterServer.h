@@ -96,7 +96,7 @@ private:
 	std::atomic<ServerState> _state= ServerState::SERVER_CREATED;
 
 	//MatchContents
-	MatchContents* _matchContents = nullptr;
+	std::unique_ptr<MatchContents> _matchContents;
 
 	//제어스레드
 	std::thread _CtrlThread;
@@ -119,7 +119,7 @@ private:
 	std::unordered_set<SOCKADDR_IN, SockAddrInHash, SockAddrInEqual> _banSet;
 	std::shared_mutex _banMutex;
 
-	std::unordered_map<SessionID,Player*> _playerMap;
+	std::unordered_map<SessionID,Player*> _playerMap;// non-owning; Player objects are owned by _playerPool
 	std::shared_mutex _playerMutex;
 
 	TlsMemoryPool<Player> _playerPool;

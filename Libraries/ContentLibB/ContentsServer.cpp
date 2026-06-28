@@ -19,7 +19,6 @@ ContentsServer::ContentsServer(ServerType type) : _type(type)
 
 ContentsServer::~ContentsServer()
 {
-	delete[] _sessionArray;
 	CloseHandle(_hcp);
 }
 
@@ -528,7 +527,7 @@ int ContentsServer::Setting(char code, char key)
 	int cpretval;//CreateIoCompletionProt retval
 
 	//최대접속자수로 배열 생성
-	_sessionArray = new SESSION[_maxUser];
+	_sessionArray = std::make_unique<SESSION[]>(_maxUser);
 
 	//인덱스스택에 index세팅
 	for (int i = _maxUser - 1; i >= 0; i--)

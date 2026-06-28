@@ -11,8 +11,8 @@ FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGe
 	_CtrlThread = std::thread(CtrlThread, this);
 	_dbThreadRun.store(true);
 	_DBThread = std::thread(DBThread, this);
-	_matchContents = new MatchContents;
-	RegisterContents(MATCH, _matchContents);
+	_matchContents = std::make_unique<MatchContents>();
+	RegisterContents(MATCH, _matchContents.get());
 	SetDefaultContents(MATCH);
 }
 
