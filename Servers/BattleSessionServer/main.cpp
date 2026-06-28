@@ -20,4 +20,5 @@ int main()
 		Sleep(1000);
 	}
 	LOG(L"SYSTEM", LVSYSTEM, L"FighterServer ShutDown");
+	delete server;
 }

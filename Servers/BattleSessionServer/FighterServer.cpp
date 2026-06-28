@@ -5,7 +5,7 @@
 #include <thread>
 
 
-FighterServer::FighterServer() :ContentsServer(LANSERVER),_matchIDGenerator(0)
+FighterServer::FighterServer() :ContentsServer(LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
 {
 	_ctrlThreadRun.store(true);
 	_CtrlThread = std::thread(CtrlThread, this);

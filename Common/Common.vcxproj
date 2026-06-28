@@ -129,6 +129,8 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(SolutionDir)Common\redis;$(SolutionDir)Common\LockFree;$(SolutionDir)Common\TLS;$(SolutionDir)Common;C:\Program Files\MySQL\MySQL Server 8.0\include</AdditionalIncludeDirectories>
       <LanguageStandard>Default</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>

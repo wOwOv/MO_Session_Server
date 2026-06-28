@@ -20,15 +20,10 @@ public:
 
 	~LFStack()
 	{
-		if (_top != nullptr)
+		DATA temp;
+		//노드풀로 모두 반환
+		while (Pop(&temp))
 		{
-			do
-			{
-				Node* temp = _top->_next;
-				delete _top;
-				_top = temp;
-
-			} while (_top != nullptr);
 		}
 	}
 
@@ -56,7 +51,7 @@ public:
 		Node* realadr;
 		unsigned long long tempadr;
 
-		unsigned long long ssize = InterlockedDecrement(&_size);
+		long ssize = InterlockedDecrement(&_size);
 		if (ssize < 0)
 		{
 			InterlockedIncrement(&_size);
@@ -89,7 +84,7 @@ public:
 
 private:
 	Node* _top;
-	unsigned long long _size;
+	long _size;
 	short _key= 0;
 	TlsMemoryPool<Node> _nodepool;
 };
