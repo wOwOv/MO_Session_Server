@@ -573,8 +573,8 @@ int ContentsServer::Setting(char code, char key)
 	if (_timeoutVal == 1)
 	{
 		//TimeOutThread»ý¼º
-		_monitorThread = (HANDLE)_beginthreadex(NULL, 0, &TimeOutThread, this, 0, NULL);
-		if (_monitorThread == NULL)
+		_timeOutThread = (HANDLE)_beginthreadex(NULL, 0, &TimeOutThread, this, 0, NULL);
+		if (_timeOutThread == NULL)
 		{
 			return 1;
 		}
