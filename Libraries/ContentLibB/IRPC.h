@@ -18,8 +18,8 @@ public:
 	}
 
 protected:
-	ContentsServer* _server;
-	Contents* _contents;
+	ContentsServer* _server=nullptr;
+	Contents* _contents=nullptr;
 };
 class IProxy
 {
@@ -30,6 +30,6 @@ public:
 	}
 
 protected:
-	ContentsServer* _server;
+	ContentsServer* _server=nullptr;
 };
 
