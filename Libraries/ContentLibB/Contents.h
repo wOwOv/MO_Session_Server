@@ -5,6 +5,7 @@
 #include "TlsMemoryPool.h"
 #include "CPacket.h"
 #include "IRPC.h"
+#include <cstdint>
 
 
 enum TMessageType{ ENTER = 0, LEAVE, MESSAGE };

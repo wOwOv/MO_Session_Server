@@ -90,8 +90,24 @@ private:
 				&& a.sin_port == b.sin_port;
 		}
 	};
+public:
+	std::atomic<int> fightAllocRequest = 0;
+	std::atomic<int> fightFreeRequest1 = 0;
+	std::atomic<int> fightFreeRequest2 = 0;
+	std::atomic<int> fightAllocExecute = 0;
+	std::atomic<int> fightFreeExecute = 0;
+	std::atomic<int> playerRelease = 0;
+	std::atomic<int> matchRelease = 0;
+	std::atomic<int> fightRelease = 0;
+	std::atomic<int> MatchOnEnter = 0;
+	std::atomic<int> FightOnEnter = 0;
+	std::atomic<int> FightOnLeaveFindFail = 0;
+	std::atomic<int> FightOnEnterFindSuccess = 0;
+	std::atomic<int> FightOnEnterFindFail = 0;
+
 
 private:
+
 	bool _shutDown = false;
 	std::atomic<ServerState> _state= ServerState::SERVER_CREATED;
 

@@ -1,11 +1,7 @@
 #ifndef  __TLSMEMORYPOOL__
 #define  __TLSMEMORYPOOL__
-
-#include <new>
+#include <new.h>
 #include <windows.h>
-#include <vector>
-#include <memory>
-#include <mutex>
 
 static unsigned long Cookie = 0x01010100;
 
@@ -13,14 +9,14 @@ template <class DATA>
 class TlsMemoryPool
 {
 private:
-	static constexpr unsigned long long ADRMASK = 0x0000ffffffffffff;
+	const unsigned long long ADRMASK = 0x0000ffffffffffff;
 
 	struct Node
 	{
 		DATA _data;
 		Node* _next;
-		Node* _chunknext;
-	}typedef Chunk;
+		Node* _bunchnext;
+	}typedef Bunch;
 
 	struct TlsPool
 	{
@@ -35,7 +31,7 @@ private:
 
 public:
 
-	TlsMemoryPool(int BlockNum=500, int chunksize=500,bool PlacementNew = false, bool maxflag = false)
+	TlsMemoryPool(int BlockNum=500, int bunchsize=500,bool PlacementNew = false, bool maxflag = false)
 	{
 		_tlsIndex = TlsAlloc();
 		if (_tlsIndex == TLS_OUT_OF_INDEXES)
@@ -47,26 +43,58 @@ public:
 		_maxCount = BlockNum;
 		_maxFlag = maxflag;
 
-		_chunkSize = chunksize;
+		_bunchSize = bunchsize;
 
 		_capacity = 0;
 		_usingCount = 0;
 
 		_top = nullptr;
-		_chunkCount=0;
+		_bunchCount=0;
 		_key = 0;
 	}
 	~TlsMemoryPool()
 	{
 		
-		TlsFree(_tlsIndex);
-		
-	}
+		TlsPool* tpool = (TlsPool*)TlsGetValue(_tlsIndex);
+		if (tpool != nullptr)
+		{
 
-	TlsMemoryPool(const TlsMemoryPool&) = delete;
-	TlsMemoryPool& operator=(const TlsMemoryPool&) = delete;
-	TlsMemoryPool(TlsMemoryPool&&) = delete;
-	TlsMemoryPool& operator=(TlsMemoryPool&&) = delete;
+		Node* node = tpool->_nodelist;
+		Node* temp = node->_next;
+			while (1)
+			{
+				if (node != nullptr)
+				{
+					temp = node->_next;
+					delete node;
+					node = temp;
+				}
+				else
+				{
+					break;
+				}
+			}
+		
+
+		node = tpool->_freelist;
+		temp = node->_next;
+		while (1)
+		{
+			if (node != nullptr)
+			{
+				temp = node->_next;
+				delete node;
+				node = temp;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		TlsFree(_tlsIndex);
+		}
+	}
 
 	__forceinline DATA* Alloc(void)
 	{
@@ -81,36 +109,29 @@ public:
 			tpool->_freelist = nullptr;
 			tpool->_freeCount = 0;
 			tpool->_storedCount = 0;
-			{
-				std::lock_guard<std::mutex > lock(_tlsmutex);
-				_tlsPools.emplace_back(tpool);
-			}
 
 			//생성자 호출한 상태로 들어가야함
-			Node* chunk = nullptr;
-			if (_pnFlag)
+			if (_pnFlag == 0)
 			{
-				chunk = static_cast<Node*>(::operator new(sizeof(Node) * _maxCount));
-			}
-			else
-			{
-				chunk = new Node[_maxCount];
-			}
-			{
-				std::lock_guard<std::mutex > lock(_mutex);
-				_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
-			}
-			//100번->0번 순서, 0번노드는 과거 헤드를 next로 가져야함
-			for (int i = 1; i < _maxCount; ++i)
-			{
-				Node* node = &chunk[i];
-				node->_next = &chunk[i - 1];
-			}
-			Node* newhead = &chunk[_maxCount - 1];
-			Node* lastnode = &chunk[0];
-			lastnode->_next = nullptr;
+				for (int i = 0; i < _maxCount; i++)
+				{
+					Node* node = new Node;
 
-			tpool->_nodelist = newhead;
+					node->_next = tpool->_nodelist;
+					tpool->_nodelist = node;
+				}
+			}
+			else//생성자 호출 없이 들어가야함
+			{
+				for (int i = 0; i < _maxCount; i++)
+				{
+					Node* node = (Node*)malloc(sizeof(Node));
+
+					node->_next = tpool->_nodelist;
+					tpool->_nodelist = node;
+				}
+			}
+
 			tpool->_nodeCount = _maxCount;
 			tpool->_storedCount = tpool->_nodeCount+tpool->_freeCount;
 			InterlockedAdd((long*) & _capacity, _maxCount);
@@ -144,12 +165,12 @@ public:
 		//공용풀에서 받아와야한다면
 		else
 		{
-			Node* nodechunk = GetBucket();
+			Node* nodebunch = GetBucket();
 			//공용풀에서 노드묶음 받아옴
-			if (nodechunk != nullptr)
+			if (nodebunch != nullptr)
 			{
 				//내 노드리스트에 연결
-				tpool->_nodelist = nodechunk;
+				tpool->_nodelist = nodebunch;
 
 				//노드 떼서 주기
 				allocated = tpool->_nodelist;
@@ -159,21 +180,14 @@ public:
 				{
 					new(&(allocated->_data)) DATA;
 				}
-				tpool->_nodeCount =  _chunkSize - 1;
+				tpool->_nodeCount =  _bunchSize - 1;
 			}
 			//공용풀에서도 못 받아왔음
 			else
 			{
 				//진짜 할당해서 줘야함
-				ChunkAlloc();
-				allocated = tpool->_nodelist;
-				tpool->_nodelist = allocated->_next;
-				//_pnFlag가 1이면 생성자 호출해서 나가야함
-				if (_pnFlag != 0)
-				{
-					new(&(allocated->_data)) DATA;
-				}
-				tpool->_nodeCount--;
+				allocated = new Node;
+				InterlockedIncrement(&_capacity);
 			}
 			
 		}
@@ -238,7 +252,7 @@ public:
 		}
 
 		//nodelist 자리가 있다면
-		if (tpool->_nodeCount <  _chunkSize)
+		if (tpool->_nodeCount <  _bunchSize)
 		{
 			retnode->_next = tpool->_nodelist;
 			tpool->_nodelist = retnode;
@@ -252,7 +266,7 @@ public:
 			tpool->_freeCount++;
 
 			//freelist가 다 찼다면
-			if (tpool->_freeCount ==  _chunkSize)
+			if (tpool->_freeCount ==  _bunchSize)
 			{
 				ReturnBucket(tpool->_freelist);
 				tpool->_freelist = nullptr;
@@ -277,9 +291,9 @@ public:
 		return tpool->_storedCount;
 	}
 
-	__forceinline unsigned long long GetChunkCount()
+	__forceinline unsigned long long GetBunchCount()
 	{
-		return _chunkCount;
+		return _bunchCount;
 	}
 
 	__forceinline unsigned long GetCapacity()
@@ -294,32 +308,32 @@ public:
 	
 //Bucket 스택에서 얻어보고 반환할 때 쓰는 함수
 private:
-	__forceinline void ReturnBucket(Node* nodechunk)
+	__forceinline void ReturnBucket(Node* nodebunch)
 	{
-		Chunk* chunk = (Chunk*)nodechunk;
-		unsigned long long tagadr = (unsigned long long)chunk;
+		Bunch* bunch = (Bunch*)nodebunch;
+		unsigned long long tagadr = (unsigned long long)bunch;
 		unsigned long long tag = InterlockedIncrement16(&_key);
 		tagadr |= (tag << 48);
-		Chunk* tagbucket = (Chunk*)tagadr;
-		Chunk* oldtop;
+		Bunch* tagbucket = (Bunch*)tagadr;
+		Bunch* oldtop;
 		do
 		{
 			oldtop = _top;
-			chunk->_chunknext = oldtop;
+			bunch->_bunchnext = oldtop;
 		} while (InterlockedCompareExchange64((__int64*)&_top, (__int64)tagbucket, (__int64)oldtop) != (__int64)oldtop);
-		InterlockedIncrement(&_chunkCount);
+		InterlockedIncrement(&_bunchCount);
 	}
 	__forceinline Node* GetBucket()
 	{
-		Chunk* oldtop;
-		Chunk* newtop;
-		Chunk* realadr;
+		Bunch* oldtop;
+		Bunch* newtop;
+		Bunch* realadr;
 		unsigned long long tempadr;
 		Node* retptr;
-		long size = InterlockedDecrement(&_chunkCount);
+		long size = InterlockedDecrement(&_bunchCount);
 		if (size < 0)
 		{
-			InterlockedIncrement(&_chunkCount);
+			InterlockedIncrement(&_bunchCount);
 			return nullptr;
 		}
 
@@ -328,8 +342,8 @@ private:
 			oldtop = _top;
 			tempadr = (unsigned long long)oldtop;
 			tempadr &= ADRMASK;
-			realadr = (Chunk*)tempadr;
-			newtop = realadr->_chunknext;
+			realadr = (Bunch*)tempadr;
+			newtop = realadr->_bunchnext;
 			retptr = realadr;
 		} while (InterlockedCompareExchange64((__int64*)&_top, (__int64)newtop, (__int64)oldtop) != (__int64)oldtop);
 
@@ -343,81 +357,16 @@ private:
 	int _maxCount;
 	bool _maxFlag;
 
-	unsigned int _chunkSize;
+	unsigned int _bunchSize;
 	
 	unsigned long _capacity;
 	unsigned long _usingCount;
 
 	DWORD _tlsIndex = 0;
 	
-	Chunk* _top;							//Chunk Top
-	unsigned long _chunkCount;				//보관 중인 chunk개수
+	Bunch* _top;							//Bunch Top
+	unsigned long _bunchCount;				//보관 중인 Bunch개수
 	short _key;								//tag
-
-private:
-	struct ChunkDeleter
-	{
-		bool _placementNew = false;
-
-		void operator()(Node* chunk) const noexcept
-		{
-			if (chunk == nullptr)
-			{
-				return;
-			}
-
-			if (_placementNew)
-			{
-				::operator delete(chunk);
-			}
-			else
-			{
-				delete[] chunk;
-			}
-		}
-	};
-	using ChunkOwner = std::unique_ptr<Node, ChunkDeleter>;
-
-	void ChunkAlloc()
-	{
-		Node* chunk = nullptr;
-		if (_pnFlag)
-		{
-			chunk = static_cast<Node*>(::operator new(sizeof(Node) * _chunkSize));
-		}
-		else
-		{
-			chunk = new Node[_chunkSize];
-		}
-		{
-			std::lock_guard<std::mutex > lock(_mutex);
-			_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
-		}
-		//100번->0번 순서, 0번노드는 과거 헤드를 next로 가져야함
-		for (int i = 1; i < _chunkSize; ++i)
-		{
-			Node* node = &chunk[i];
-			node->_next = &chunk[i - 1];
-		}
-		Node* newhead = &chunk[_chunkSize-1];
-		Node* lastnode = &chunk[0];
-		lastnode->_next = nullptr;
-
-		TlsPool* tpool = (TlsPool*)TlsGetValue(_tlsIndex);
-		tpool->_nodelist = newhead;
-		tpool->_nodeCount = _chunkSize;
-		InterlockedAdd((long*)&_capacity, _chunkSize);
-
-
-
-	}
-
-	std::mutex _mutex;
-	std::vector<ChunkOwner> _chunks;
-
-	std::mutex _tlsmutex;
-	std::vector<std::unique_ptr<TlsPool>> _tlsPools;
-
 };
 
 

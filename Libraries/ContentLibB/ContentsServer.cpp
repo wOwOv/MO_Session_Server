@@ -94,7 +94,7 @@ void ContentsServer::ShowServerInfo()
 		break;
 	}
 	}
-	printf("Session : %d\nAcceptTotal : %d\nAcceptTPS : %d\nRecvTPS : %\nSendTPS: %d\nSBufferCapacity : %d\nSBufferUsing : %d\n"
+	printf("Session : %d\nAcceptTotal : %d\nAcceptTPS : %d\nRecvTPS : %d\nSendTPS: %d\nSBufferCapacity : %d\nSBufferUsing : %d\n"
 	,GetSessionCount(),GetAcceptTotal(),GetAcceptTPS(),GetRecvMessageTPS(),GetSendMessageTPS(),GetSBufferCapacity(),GetSBufferUsingCount());
 }
 
@@ -295,7 +295,7 @@ unsigned long ContentsServer::GetContentsLogic(__int32 contentsnum)
 
 
 
-void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents)
+void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents) 
 {
 	SRWExclusiveLockGuard guard(_mapKey);
 	_contentsMap.insert(std::make_pair(contentsnum, contents));
@@ -1083,7 +1083,7 @@ bool ContentsServer::Release(SESSION* tgt)
 	{
 		return false;
 	}
-
+	ReleaseCount.fetch_add(1);
 	closesocket(tgt->_sock);
 	tgt->_sock = INVALID_SOCKET;
 	for (int i = 0; i < tgt->_packetBox._count; i++)
@@ -1096,8 +1096,16 @@ bool ContentsServer::Release(SESSION* tgt)
 
 	//메모리풀 스택 방식
 	InterlockedDecrement(&_sessionCount);
-
-	if (tgt->_contentsNum != 0 && tgt->_contentsNum != -1)
+	int32_t contentsnum = tgt->_contentsNum;
+	if (contentsnum == -1)
+	{
+		Release1Count.fetch_add(1);
+	}
+	if (contentsnum == 0)
+	{
+		Release0Count.fetch_add(1);
+	}
+	if (contentsnum != 0 && contentsnum != -1)
 	{
 		SRWSharedLockGuard mapGuard(_mapKey);
 		std::unordered_map<__int32, Contents*>::iterator tgtc = _contentsMap.find(tgt->_contentsNum);
@@ -1106,6 +1114,10 @@ bool ContentsServer::Release(SESSION* tgt)
 			Contents* contents = tgtc->second;
 			SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
 			contents->OnLeave(tgt->_sessionID, nullptr);
+		}
+		else if(contentsnum!= 1000000001)
+		{
+			ReleaseFindFail.fetch_add(1);
 		}
 	}
 
