@@ -151,17 +151,21 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 	{
 		((FighterServer*)_mServer)->FightOnEnterFindSuccess.fetch_add(1);
 		player = it->second;
-		_mServer->SetContentsNum(player->_sessionID, GetContentsNum());
-		player->_contents = GetContentsNum();
-		if (player->_team == Team::RED)
+		bool moved=_mServer->SetContentsNum(player->_sessionID, GetContentsNum());
+		if (moved)
 		{
-			_redCount++;
+			player->_contents = GetContentsNum();
+			if (player->_team == Team::RED)
+			{
+				_redCount++;
+			}
+			else
+			{
+				_blueCount++;
+			}
+			_playerMap.insert(std::make_pair(sessionID, player));
 		}
-		else
-		{
-			_blueCount++;
-		}
-		_playerMap.insert(std::make_pair(sessionID, player));
+		
 	}
 	else
 	{
