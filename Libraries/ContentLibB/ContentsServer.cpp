@@ -353,6 +353,7 @@ bool ContentsServer::SetContentsNum(__int64 sessionID, __int32 contentsnum)
 		}
 		return false;
 	}
+	bool changed = false;
 	//내가 찾던 세션이 맞는지 확인
 	if (InterlockedOr((unsigned long long*) & _sessionArray[index]._sessionID, 0) == sessionID)
 	{
@@ -360,6 +361,7 @@ bool ContentsServer::SetContentsNum(__int64 sessionID, __int32 contentsnum)
 		if (_sessionArray[index]._dFlag == 0)
 		{
 			InterlockedExchange((long*)&_sessionArray[index]._contentsNum, contentsnum);
+			changed = true;
 		}
 
 	}
@@ -369,7 +371,7 @@ bool ContentsServer::SetContentsNum(__int64 sessionID, __int32 contentsnum)
 		PostQueuedCompletionStatus(_hcp, 1, (ULONG_PTR)&_sessionArray[index], NULL);
 	}
 
-	return true;
+	return changed;
 }
 
 
