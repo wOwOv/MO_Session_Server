@@ -190,12 +190,6 @@ private:
 	//SendQ 락프리큐 초기화용
 	void ClearSendQ(MAXLFQueue<SBuffer*>* lfQ);
 
-	public:
-		std::atomic<int> ReleaseCount = 0;
-		std::atomic<int> Release1Count = 0;
-		std::atomic<int> Release0Count = 0;
-		std::atomic<int> ReleaseFindFail = 0;
-
 private:
 	unsigned long long _acceptCall = 0;
 	long _acceptTPS = 0;

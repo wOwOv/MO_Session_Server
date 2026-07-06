@@ -82,10 +82,8 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 			}
 			server->_ctrlQ.Enqueue(control);
 			server->_ctrlCv.notify_one();
-			server->fightAllocRequest.fetch_add(1);
 		}
 	}
-	server->MatchOnEnter.fetch_add(1);
 
 }
 
@@ -100,7 +98,6 @@ void MatchContents::OnLeave(__int64 sessionID, void* extra)
 		server->_ctrlQ.Enqueue(control);
 		server->_ctrlCv.notify_one();
 	}
-	static_cast<FighterServer*>(_mServer)->matchRelease.fetch_add(1);
 }
 
 void MatchContents::OnUpdate()
@@ -142,14 +139,12 @@ FightContents::~FightContents()
 
 void FightContents::OnEnter(__int64 sessionID, void* extra)
 {
-	((FighterServer*)_mServer)->FightOnEnter.fetch_add(1);
 	FighterServer* server = static_cast<FighterServer*>(_mServer);
 	ReadLock lock(server->_playerMutex);
 	Player* player;
 	std::unordered_map<SessionID, Player*>::iterator it = server->_playerMap.find(sessionID);
 	if (it != server->_playerMap.end())
 	{
-		((FighterServer*)_mServer)->FightOnEnterFindSuccess.fetch_add(1);
 		player = it->second;
 		bool moved=_mServer->SetContentsNum(player->_sessionID, GetContentsNum());
 		if (moved)
@@ -166,10 +161,6 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 			_playerMap.insert(std::make_pair(sessionID, player));
 		}
 		
-	}
-	else
-	{
-		((FighterServer*)_mServer)->FightOnEnterFindFail.fetch_add(1);
 	}
 
 	++_matched;
@@ -203,7 +194,6 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 
 			server->_ctrlQ.Enqueue(control);
 			server->_ctrlCv.notify_one();
-			server->fightFreeRequest1.fetch_add(1);
 			return;
 		}
 		int redcnt = 0;
@@ -261,11 +251,9 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 
 void FightContents::OnLeave(__int64 sessionID, void* extra)
 {
-	static_cast<FighterServer*>(_mServer)->fightRelease.fetch_add(1);
 	std::unordered_map<SessionID, Player*>::iterator it = _playerMap.find(sessionID);
 	if (it == _playerMap.end())
 	{
-		static_cast<FighterServer*>(_mServer)->FightOnLeaveFindFail.fetch_add(1);
 		return;
 	}
 	Player* player = it->second;
@@ -323,7 +311,6 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 
 		server->_ctrlQ.Enqueue(control);
 		server->_ctrlCv.notify_one();
-		server->fightFreeRequest2.fetch_add(1);
 		
 	}
 

@@ -12,6 +12,7 @@
 
 ContentsServer::ContentsServer(ServerType type) : _type(type)
 {
+	InitializeSRWLock(&_mapKey);
 	timeBeginPeriod(1);
 	LOG(L"SYSTEM",LVSYSTEM,L"ContentsServer Created");
 
@@ -1085,7 +1086,6 @@ bool ContentsServer::Release(SESSION* tgt)
 	{
 		return false;
 	}
-	ReleaseCount.fetch_add(1);
 	closesocket(tgt->_sock);
 	tgt->_sock = INVALID_SOCKET;
 	for (int i = 0; i < tgt->_packetBox._count; i++)
@@ -1099,14 +1099,6 @@ bool ContentsServer::Release(SESSION* tgt)
 	//메모리풀 스택 방식
 	InterlockedDecrement(&_sessionCount);
 	int32_t contentsnum = tgt->_contentsNum;
-	if (contentsnum == -1)
-	{
-		Release1Count.fetch_add(1);
-	}
-	if (contentsnum == 0)
-	{
-		Release0Count.fetch_add(1);
-	}
 	if (contentsnum != 0 && contentsnum != -1)
 	{
 		SRWSharedLockGuard mapGuard(_mapKey);
@@ -1116,10 +1108,6 @@ bool ContentsServer::Release(SESSION* tgt)
 			Contents* contents = tgtc->second;
 			SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
 			contents->OnLeave(tgt->_sessionID, nullptr);
-		}
-		else if(contentsnum!= 1000000001)
-		{
-			ReleaseFindFail.fetch_add(1);
 		}
 	}
 

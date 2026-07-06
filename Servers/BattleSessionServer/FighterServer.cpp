@@ -2,6 +2,7 @@
 #include "DBConnector.h"
 #include "BattleDB.h"
 #include <thread>
+#include <mutex>
 
 
 FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
@@ -82,7 +83,6 @@ void FighterServer::OnRelease(__int64 sessionID, __int32 contentsnum)
 		_playerMap.erase(sessionID);
 		_playerPool.Free(player);
 	}
-	playerRelease.fetch_add(1);
 
 }
 
@@ -113,6 +113,7 @@ int FighterServer::GetControlQSize()
 
 int FighterServer::GetPlayerCount()
 {
+	std::lock_guard<std::shared_mutex> lock(_playerMutex);
 	return _playerMap.size();
 }
 
@@ -299,7 +300,6 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 				{
 					++cnum;
 				}
-				server->fightAllocExecute.fetch_add(1);
 				break;
 			}
 			case CONTROLTYPE::FIGHTFREE:
@@ -307,7 +307,6 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 				FightContents* fight = (FightContents*)control->_contents;
 				server->DeregisterContents(fight->GetContentsNum());
 				server->_fightPool.Free(fight);
-				server->fightFreeExecute.fetch_add(1);
 				break;
 			}
 			case CONTROLTYPE::MATCHDEREGISTER:
