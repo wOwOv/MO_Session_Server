@@ -84,7 +84,6 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 			server->_ctrlCv.notify_one();
 		}
 	}
-	
 
 }
 
@@ -147,22 +146,56 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 	if (it != server->_playerMap.end())
 	{
 		player = it->second;
-		_mServer->SetContentsNum(player->_sessionID, GetContentsNum());
-		player->_contents = GetContentsNum();
-		if (player->_team == Team::RED)
+		bool moved=_mServer->SetContentsNum(player->_sessionID, GetContentsNum());
+		if (moved)
 		{
-			_redCount++;
+			player->_contents = GetContentsNum();
+			if (player->_team == Team::RED)
+			{
+				_redCount++;
+			}
+			else
+			{
+				_blueCount++;
+			}
+			_playerMap.insert(std::make_pair(sessionID, player));
 		}
-		else
-		{
-			_blueCount++;
-		}
-		_playerMap.insert(std::make_pair(sessionID, player));
+		
 	}
 
 	++_matched;
 	if (_matched >= 6)
 	{
+		if (CheckGameEnd() && _end)
+		{
+			_end = 0;
+			std::unordered_map<SessionID, Player*>::iterator cit = _playerMap.begin();
+			for (; cit != _playerMap.end(); cit++)
+			{
+				Player* tgt = cit->second;
+				Disconnect(tgt->_sessionID);
+			}
+
+			BattleResult result;
+			result._matchID = _matchID;
+			for (int i = 0; i < 3; i++)
+			{
+				result._red[i] = _red[i];
+				result._blue[i] = _blue[i];
+			}
+			result._winnerTeam = _winLoss;
+
+			FighterServer* server = (FighterServer*)_mServer;
+			server->RequestSaveBattleResult(result);
+
+			Control* control = server->_controlPool.Alloc();
+			control->_type = CONTROLTYPE::FIGHTFREE;
+			control->_contents = this;
+
+			server->_ctrlQ.Enqueue(control);
+			server->_ctrlCv.notify_one();
+			return;
+		}
 		int redcnt = 0;
 		int bluecnt = 0;
 		std::unordered_map<SessionID, Player*>::iterator cit = _playerMap.begin();
@@ -280,7 +313,7 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 		server->_ctrlCv.notify_one();
 		
 	}
-	
+
 }
 
 void FightContents::OnUpdate()

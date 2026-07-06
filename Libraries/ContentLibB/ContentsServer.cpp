@@ -12,6 +12,7 @@
 
 ContentsServer::ContentsServer(ServerType type) : _type(type)
 {
+	InitializeSRWLock(&_mapKey);
 	timeBeginPeriod(1);
 	LOG(L"SYSTEM",LVSYSTEM,L"ContentsServer Created");
 
@@ -94,7 +95,7 @@ void ContentsServer::ShowServerInfo()
 		break;
 	}
 	}
-	printf("Session : %d\nAcceptTotal : %d\nAcceptTPS : %d\nRecvTPS : %\nSendTPS: %d\nSBufferCapacity : %d\nSBufferUsing : %d\n"
+	printf("Session : %d\nAcceptTotal : %d\nAcceptTPS : %d\nRecvTPS : %d\nSendTPS: %d\nSBufferCapacity : %d\nSBufferUsing : %d\n"
 	,GetSessionCount(),GetAcceptTotal(),GetAcceptTPS(),GetRecvMessageTPS(),GetSendMessageTPS(),GetSBufferCapacity(),GetSBufferUsingCount());
 }
 
@@ -295,7 +296,7 @@ unsigned long ContentsServer::GetContentsLogic(__int32 contentsnum)
 
 
 
-void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents)
+void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents) 
 {
 	SRWExclusiveLockGuard guard(_mapKey);
 	_contentsMap.insert(std::make_pair(contentsnum, contents));
@@ -353,6 +354,7 @@ bool ContentsServer::SetContentsNum(__int64 sessionID, __int32 contentsnum)
 		}
 		return false;
 	}
+	bool changed = false;
 	//내가 찾던 세션이 맞는지 확인
 	if (InterlockedOr((unsigned long long*) & _sessionArray[index]._sessionID, 0) == sessionID)
 	{
@@ -360,6 +362,7 @@ bool ContentsServer::SetContentsNum(__int64 sessionID, __int32 contentsnum)
 		if (_sessionArray[index]._dFlag == 0)
 		{
 			InterlockedExchange((long*)&_sessionArray[index]._contentsNum, contentsnum);
+			changed = true;
 		}
 
 	}
@@ -369,7 +372,7 @@ bool ContentsServer::SetContentsNum(__int64 sessionID, __int32 contentsnum)
 		PostQueuedCompletionStatus(_hcp, 1, (ULONG_PTR)&_sessionArray[index], NULL);
 	}
 
-	return true;
+	return changed;
 }
 
 
@@ -573,8 +576,8 @@ int ContentsServer::Setting(char code, char key)
 	if (_timeoutVal == 1)
 	{
 		//TimeOutThread생성
-		_monitorThread = (HANDLE)_beginthreadex(NULL, 0, &TimeOutThread, this, 0, NULL);
-		if (_monitorThread == NULL)
+		_timeOutThread = (HANDLE)_beginthreadex(NULL, 0, &TimeOutThread, this, 0, NULL);
+		if (_timeOutThread == NULL)
 		{
 			return 1;
 		}
@@ -1083,7 +1086,6 @@ bool ContentsServer::Release(SESSION* tgt)
 	{
 		return false;
 	}
-
 	closesocket(tgt->_sock);
 	tgt->_sock = INVALID_SOCKET;
 	for (int i = 0; i < tgt->_packetBox._count; i++)
@@ -1096,8 +1098,8 @@ bool ContentsServer::Release(SESSION* tgt)
 
 	//메모리풀 스택 방식
 	InterlockedDecrement(&_sessionCount);
-
-	if (tgt->_contentsNum != 0 && tgt->_contentsNum != -1)
+	int32_t contentsnum = tgt->_contentsNum;
+	if (contentsnum != 0 && contentsnum != -1)
 	{
 		SRWSharedLockGuard mapGuard(_mapKey);
 		std::unordered_map<__int32, Contents*>::iterator tgtc = _contentsMap.find(tgt->_contentsNum);

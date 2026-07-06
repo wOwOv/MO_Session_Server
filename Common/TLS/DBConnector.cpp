@@ -8,6 +8,16 @@
 #include <strsafe.h>
 #include <windows.h>
 
+namespace
+{
+	void LogMysqlError(const wchar_t* prefix, const char* errorText)
+	{
+		wchar_t werror[1024] = {};
+		MultiByteToWideChar(CP_ACP, 0, errorText, -1, werror, _countof(werror));
+		LOG(L"Database", LVSYSTEM, L"%s : %s", prefix, werror);
+	}
+}
+
 DBConnector::DBConnector(const char* txtname)
 {
 	Parsing(txtname);
@@ -28,7 +38,7 @@ bool DBConnector::Connect()
 	if (_connection == nullptr)
 	{
 		// mysql_errno(&_MySQL);
-		LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&_conn));
+		LogMysqlError(L"Mysql connection error", mysql_error(&_conn));
 		return false;
 	}
 	return true;
@@ -70,7 +80,7 @@ bool DBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 	ULONGLONG time = GetTickCount64() - start;
 	if (_queryStat != 0)
 	{
-		LOG(L"Database", LVSYSTEM, L"Mysql query error : %s", mysql_error(&_conn));
+		
 		return false;
 	}
 
@@ -100,7 +110,7 @@ bool DBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 	ULONGLONG time = GetTickCount64() - start;
 	if (_queryStat != 0)
 	{
-		LOG(L"Database", LVSYSTEM, L"Mysql query error : %s", mysql_error(&_conn));
+		LogMysqlError(L"Mysql query error", mysql_error(&_conn));
 		return false;
 	}
 
@@ -160,7 +170,7 @@ bool TLSDBConnector::Connect()
 	if (sqldata->_connection == NULL)
 	{
 		// mysql_errno(&_MySQL);
-		LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
+		LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
 		return false;
 	}
 	return true;
@@ -185,7 +195,7 @@ bool TLSDBConnector::BeginTransaction()
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -208,7 +218,7 @@ bool TLSDBConnector::Commit()
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -231,7 +241,7 @@ bool TLSDBConnector::Rollback()
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -254,7 +264,7 @@ bool TLSDBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -269,7 +279,7 @@ bool TLSDBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 	ULONGLONG time = GetTickCount64() - start;
 	if (sqldata->_queryStat != 0)
 	{
-		LOG(L"Database", LVSYSTEM, L"Mysql query error : %s", mysql_error(&sqldata->_conn));
+		LogMysqlError(L"Mysql query error", mysql_error(&sqldata->_conn));
 		return false;
 	}
 
@@ -301,7 +311,7 @@ bool TLSDBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LOG(L"Database", LVSYSTEM, L"Mysql connection error : %s", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -316,7 +326,7 @@ bool TLSDBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 	ULONGLONG time = GetTickCount64() - start;
 	if (sqldata->_queryStat != 0)
 	{
-		LOG(L"Database", LVSYSTEM, L"Mysql query error : %s", mysql_error(&sqldata->_conn));
+		LogMysqlError(L"Mysql query error", mysql_error(&sqldata->_conn));
 		return false;
 	}
 

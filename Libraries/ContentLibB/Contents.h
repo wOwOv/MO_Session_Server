@@ -5,6 +5,7 @@
 #include "TlsMemoryPool.h"
 #include "CPacket.h"
 #include "IRPC.h"
+#include <cstdint>
 
 
 enum TMessageType{ ENTER = 0, LEAVE, MESSAGE };
@@ -57,7 +58,7 @@ private:
 	unsigned long _logicCount;
 
 protected:
-	ContentsServer* _mServer;	// // non-owning back-reference to ContentsServer
+	ContentsServer* _mServer=nullptr;	// // non-owning back-reference to ContentsServer
 	IStub* _stub=nullptr;		// owning; deleted by derived content class
 	IProxy* _proxy = nullptr;	// owning; deleted by derived content class
 };

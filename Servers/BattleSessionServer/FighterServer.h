@@ -92,6 +92,7 @@ private:
 	};
 
 private:
+
 	bool _shutDown = false;
 	std::atomic<ServerState> _state= ServerState::SERVER_CREATED;
 

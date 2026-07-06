@@ -2,6 +2,7 @@
 #include "DBConnector.h"
 #include "BattleDB.h"
 #include <thread>
+#include <mutex>
 
 
 FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
@@ -83,7 +84,6 @@ void FighterServer::OnRelease(__int64 sessionID, __int32 contentsnum)
 		_playerPool.Free(player);
 	}
 
-
 }
 
 void FighterServer::OnUnusual(__int64 sessionID, const SOCKADDR_IN& clientaddr)
@@ -113,6 +113,7 @@ int FighterServer::GetControlQSize()
 
 int FighterServer::GetPlayerCount()
 {
+	std::lock_guard<std::shared_mutex> lock(_playerMutex);
 	return _playerMap.size();
 }
 
