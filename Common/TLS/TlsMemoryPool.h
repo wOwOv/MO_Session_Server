@@ -144,8 +144,15 @@ public:
 			else
 			{
 				//진짜 할당해서 줘야함
-				allocated = new Node;
-				InterlockedIncrement(&_capacity);
+				ChunkAlloc();
+				allocated = tpool->_nodelist;
+				tpool->_nodelist = allocated->_next;
+				//_pnFlag가 1이면 생성자 호출해서 나가야함
+				if (_pnFlag != 0)
+				{
+					new(&(allocated->_data)) DATA;
+				}
+				tpool->_nodeCount--;
 			}
 
 		}
@@ -299,6 +306,47 @@ private:
 	Chunk* _top;							//Chunk Top
 	long _chunkCount;				//보관 중인 Chunk개수
 	short _key;								//tag
+
+
+
+	private:
+
+		void ChunkAlloc()
+		{
+			Node* chunk = nullptr;
+			if (_pnFlag)
+			{
+				chunk = static_cast<Node*>(::operator new(sizeof(Node) * _chunkSize));
+			}
+			else
+			{
+				chunk = new Node[_chunkSize];
+			}
+			//{
+			//	std::lock_guard<std::mutex > lock(_mutex);
+			//	_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
+			//}
+			//100번->0번 순서, 0번노드는 과거 헤드를 next로 가져야함
+			for (int i = 1; i < _chunkSize; ++i)
+			{
+				Node* node = &chunk[i];
+				node->_next = &chunk[i - 1];
+			}
+			Node* newhead = &chunk[_chunkSize - 1];
+			Node* lastnode = &chunk[0];
+			lastnode->_next = nullptr;
+
+			TlsPool* tpool = (TlsPool*)TlsGetValue(_tlsIndex);
+			tpool->_nodelist = newhead;
+			tpool->_nodeCount = _chunkSize;
+			InterlockedAdd((long*)&_capacity, _chunkSize);
+
+
+
+		}
+
+
+
 };
 
 
