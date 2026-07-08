@@ -2,6 +2,8 @@
 #define  __TLSMEMORYPOOL__
 #include <new.h>
 #include <windows.h>
+#include <mutex>
+#include <vector>
 
 template <class DATA>
 class TlsMemoryPool
@@ -310,7 +312,28 @@ private:
 
 
 	private:
+		struct ChunkDeleter
+		{
+			bool _placementNew = false;
 
+			void operator()(Node* chunk) const noexcept
+			{
+				if (chunk == nullptr)
+				{
+					return;
+				}
+
+				if (_placementNew)
+				{
+					::operator delete(chunk);
+				}
+				else
+				{
+					delete[] chunk;
+				}
+			}
+		};
+		using ChunkOwner = std::unique_ptr<Node, ChunkDeleter>;
 		void ChunkAlloc()
 		{
 			Node* chunk = nullptr;
@@ -322,10 +345,10 @@ private:
 			{
 				chunk = new Node[_chunkSize];
 			}
-			//{
-			//	std::lock_guard<std::mutex > lock(_mutex);
-			//	_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
-			//}
+			{
+				std::lock_guard<std::mutex > lock(_mutex);
+				_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
+			}
 			//100번->0번 순서, 0번노드는 과거 헤드를 next로 가져야함
 			for (int i = 1; i < _chunkSize; ++i)
 			{
@@ -345,7 +368,8 @@ private:
 
 		}
 
-
+		std::mutex _mutex;
+		std::vector<ChunkOwner> _chunks;
 
 };
 
