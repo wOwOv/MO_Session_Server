@@ -71,27 +71,31 @@ public:
 			tpool->_storedCount = 0;
 
 			//생성자 호출한 상태로 들어가야함
-			if (_pnFlag == 0)
+			Node* chunk = nullptr;
+			if (_pnFlag)
 			{
-				for (int i = 0; i < _defaultAlloc; i++)
-				{
-					Node* node = new Node;
-
-					node->_next = tpool->_nodelist;
-					tpool->_nodelist = node;
-				}
+				chunk = static_cast<Node*>(::operator new(sizeof(Node) * _defaultAlloc));
 			}
-			else//생성자 호출 없이 들어가야함
+			else
 			{
-				for (int i = 0; i < _defaultAlloc; i++)
-				{
-					Node* node = (Node*)malloc(sizeof(Node));
-
-					node->_next = tpool->_nodelist;
-					tpool->_nodelist = node;
-				}
+				chunk = new Node[_defaultAlloc];
 			}
+			{
+				//Sleep(0);
+				//std::lock_guard<std::mutex > lock(_mutex);
+				//_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
+			}
+			//100번->0번 순서, 0번노드는 과거 헤드를 next로 가져야함
+			for (int i = 1; i < _defaultAlloc; ++i)
+			{
+				Node* node = &chunk[i];
+				node->_next = &chunk[i - 1];
+			}
+			Node* newhead = &chunk[_defaultAlloc - 1];
+			Node* lastnode = &chunk[0];
+			lastnode->_next = nullptr;
 
+			tpool->_nodelist = newhead;
 			tpool->_nodeCount = _defaultAlloc;
 			tpool->_storedCount = tpool->_nodeCount + tpool->_freeCount;
 			InterlockedAdd((long*)&_capacity, _defaultAlloc);
