@@ -131,6 +131,14 @@ FightContents::FightContents():Contents(0,20)
 
 FightContents::~FightContents()
 {
+	LOG(L"ProxyTrace", LVSYSTEM,
+		L"[DTOR] this=%p num=%d proxy=%p proxy_server=%p guardA=%llX guardB=%llX",
+		this,
+		GetContentsNum(),
+		_proxy,
+		_proxy ? _proxy->_server : nullptr,
+		_proxy ? _proxy->_guardA : 0ull,
+		_proxy ? _proxy->_guardB : 0ull);
 	IStub* stub = DetachStub();
 	delete stub;
 	IProxy* proxy = DetachProxy();
@@ -142,12 +150,14 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 	FighterServer* server = static_cast<FighterServer*>(_mServer);
 
 	LOG(L"ProxyTrace", LVSYSTEM,
-		L"[ENTER] this=%p num=%d session=%lld proxy=%p proxy_server=%p size=%zu matched=%d",
+		L"[ENTER] this=%p num=%d session=%lld proxy=%p proxy_server=%p guardA=%llX guardB=%llX size=%zu matched=%d",
 		this,
 		GetContentsNum(),
 		sessionID,
 		_proxy,
 		_proxy ? _proxy->_server : nullptr,
+		_proxy ? _proxy->_guardA : 0ull,
+		_proxy ? _proxy->_guardB : 0ull,
 		_playerMap.size(),
 		_matched);
 
@@ -263,12 +273,14 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 void FightContents::OnLeave(__int64 sessionID, void* extra)
 {
 	LOG(L"ProxyTrace", LVSYSTEM,
-		L"[LEAVE] this=%p num=%d session=%lld proxy=%p proxy_server=%p size=%zu red=%d blue=%d end=%d",
+		L"[LEAVE] this=%p num=%d session=%lld proxy=%p proxy_server=%p guardA=%llX guardB=%llX size=%zu red=%d blue=%d end=%d",
 		this,
 		GetContentsNum(),
 		sessionID,
 		_proxy,
 		_proxy ? _proxy->_server : nullptr,
+		_proxy ? _proxy->_guardA : 0ull,
+		_proxy ? _proxy->_guardB : 0ull,
 		_playerMap.size(),
 		_redCount,
 		_blueCount,
@@ -340,6 +352,23 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 
 void FightContents::OnUpdate()
 {
+	if (_proxy != nullptr && _proxy->_server == nullptr)
+	{
+		LOG(L"ProxyTrace", LVSYSTEM,
+			L"[UPDATE-NULL] this=%p num=%d proxy=%p proxy_server=%p guardA=%llX guardB=%llX matched=%d size=%zu red=%d blue=%d end=%d",
+			this,
+			GetContentsNum(),
+			_proxy,
+			_proxy ? _proxy->_server : nullptr,
+			_proxy ? _proxy->_guardA : 0ull,
+			_proxy ? _proxy->_guardB : 0ull,
+			_matched,
+			_playerMap.size(),
+			_redCount,
+			_blueCount,
+			_end);
+	}
+
 	DWORD deltatime = timeGetTime() - _oldTick;
 	DWORD frame = deltatime / 20;
 	DWORD remain = deltatime % 20;

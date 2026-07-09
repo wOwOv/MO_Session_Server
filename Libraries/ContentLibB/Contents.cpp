@@ -1,6 +1,19 @@
 #include "Contents.h"
 #include "ContentsServer.h"
+#include "Logger.h"
 #include <process.h>
+
+void TraceProxyServerLink(const wchar_t* tag, ContentsServer* server, IProxy* proxy)
+{
+	LOG(L"ProxyTrace", LVSYSTEM,
+		L"%s server=%p proxy=%p proxy_server=%p guardA=%llX guardB=%llX",
+		tag,
+		server,
+		proxy,
+		proxy ? proxy->_server : nullptr,
+		proxy ? proxy->_guardA : 0ull,
+		proxy ? proxy->_guardB : 0ull);
+}
 
 Contents::Contents(__int32 contentsnum, __int32 frame)
 {
@@ -77,12 +90,29 @@ IStub* Contents::DetachStub()
 void Contents::AttachProxy(IProxy* proxy)
 {
 	_proxy = proxy;
+	LOG(L"ProxyTrace", LVSYSTEM,
+		L"[CONTENTS-ATTACH-PROXY] contents=%p num=%d proxy=%p proxy_server=%p guardA=%llX guardB=%llX mserver=%p",
+		this,
+		GetContentsNum(),
+		_proxy,
+		_proxy ? _proxy->_server : nullptr,
+		_proxy ? _proxy->_guardA : 0ull,
+		_proxy ? _proxy->_guardB : 0ull,
+		_mServer);
 }
 
 IProxy* Contents::DetachProxy()
 {
 	IProxy* ret = _proxy;
+	LOG(L"ProxyTrace", LVSYSTEM,
+		L"[CONTENTS-DETACH-PROXY] contents=%p num=%d proxy=%p proxy_server=%p guardA=%llX guardB=%llX mserver=%p",
+		this,
+		GetContentsNum(),
+		ret,
+		ret ? ret->_server : nullptr,
+		ret ? ret->_guardA : 0ull,
+		ret ? ret->_guardB : 0ull,
+		_mServer);
 	_proxy = nullptr;
 	return ret;
 }
-

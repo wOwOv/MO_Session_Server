@@ -285,14 +285,27 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 				contents->SetContentsNum(cnum);
 
 				server->RegisterContents(cnum, contents);
+
+				LOG(L"ProxyTrace", LVSYSTEM,
+					L"[ALLOC-REG] fight=%p num=%d proxy=%p proxy_server=%p guardA=%llX guardB=%llX",
+					contents, cnum, contents->_proxy, contents->_proxy ? contents->_proxy->_server : nullptr,
+					contents->_proxy ? contents->_proxy->_guardA : 0ull, contents->_proxy ? contents->_proxy->_guardB : 0ull);
+
 				for (int i = 0; i < 3; i++)
 				{
 					server->InsertToContents(control->_group._red[i], cnum);
 				}
+
+				LOG(L"ProxyTrace", LVSYSTEM,
+					L"[ALLOC-RED-DONE] fight=%p num=%d proxy=%p proxy_server=%p",
+					contents, cnum, contents->_proxy, contents->_proxy ? contents->_proxy->_server : nullptr);
 				for (int i = 0; i < 3; i++)
 				{
 					server->InsertToContents(control->_group._blue[i], cnum);
 				}
+				LOG(L"ProxyTrace", LVSYSTEM,
+					L"[ALLOC-BLUE-DONE] fight=%p num=%d proxy=%p proxy_server=%p",
+					contents, cnum, contents->_proxy, contents->_proxy ? contents->_proxy->_server : nullptr);
 
 				++cnum;
 				cnum %= ROOM;
@@ -307,11 +320,13 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 				FightContents* fight = (FightContents*)control->_contents;
 				
 				LOG(L"ProxyTrace", LVSYSTEM,
-					L"[FREE] fight=%p num=%d proxy=%p proxy_server=%p",
+					L"[CTRL-FREE] fight=%p num=%d proxy=%p proxy_server=%p guardA=%llX guardB=%llX",
 					fight,
 					fight->GetContentsNum(),
 					fight->_proxy,
-					fight->_proxy ? fight->_proxy->_server : nullptr);
+					fight->_proxy ? fight->_proxy->_server : nullptr,
+					fight->_proxy ? fight->_proxy->_guardA : 0ull,
+					fight->_proxy ? fight->_proxy->_guardB : 0ull);
 
 				server->DeregisterContents(fight->GetContentsNum());
 				server->_fightPool.Free(fight);
