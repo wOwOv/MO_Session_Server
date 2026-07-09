@@ -3,7 +3,7 @@
 #include "CPacket.h"
 #include"FighterSubStub.h"
 #include "FighterProxy.h"
-
+#include "Logger.h"
 
 MatchContents::MatchContents():Contents(MATCH,-1)
 {
@@ -140,6 +140,17 @@ FightContents::~FightContents()
 void FightContents::OnEnter(__int64 sessionID, void* extra)
 {
 	FighterServer* server = static_cast<FighterServer*>(_mServer);
+
+	LOG(L"ProxyTrace", LVSYSTEM,
+		L"[ENTER] this=%p num=%d session=%lld proxy=%p proxy_server=%p size=%zu matched=%d",
+		this,
+		GetContentsNum(),
+		sessionID,
+		_proxy,
+		_proxy ? _proxy->_server : nullptr,
+		_playerMap.size(),
+		_matched);
+
 	ReadLock lock(server->_playerMutex);
 	Player* player;
 	std::unordered_map<SessionID, Player*>::iterator it = server->_playerMap.find(sessionID);
@@ -251,6 +262,17 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 
 void FightContents::OnLeave(__int64 sessionID, void* extra)
 {
+	LOG(L"ProxyTrace", LVSYSTEM,
+		L"[LEAVE] this=%p num=%d session=%lld proxy=%p proxy_server=%p size=%zu red=%d blue=%d end=%d",
+		this,
+		GetContentsNum(),
+		sessionID,
+		_proxy,
+		_proxy ? _proxy->_server : nullptr,
+		_playerMap.size(),
+		_redCount,
+		_blueCount,
+		_end);
 	std::unordered_map<SessionID, Player*>::iterator it = _playerMap.find(sessionID);
 	if (it == _playerMap.end())
 	{

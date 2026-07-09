@@ -10,6 +10,8 @@
 #include <conio.h>
 #include "SRWLockGuard.h"
 
+#include <Logger.h>
+
 ContentsServer::ContentsServer(ServerType type) : _type(type)
 {
 	InitializeSRWLock(&_mapKey);
@@ -309,6 +311,15 @@ void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents)
 	{
 		contents->_stub->ConnectServer(this);
 	}
+
+	LOG(L"ProxyTrace", LVSYSTEM,
+		L"[REGISTER] contents=%p num=%d proxy=%p proxy_server=%p server=%p",
+		contents,
+		contentsnum,
+		contents->_proxy,
+		contents->_proxy ? contents->_proxy->_server : nullptr,
+		this);
+
 	if (contents->_frame != -1)
 	{
 		PostQueuedCompletionStatus(_hcp, contentsnum, contentsnum, (LPOVERLAPPED)103);//OnUpdatePQCS

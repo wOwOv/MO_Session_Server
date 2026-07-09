@@ -305,6 +305,14 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 			case CONTROLTYPE::FIGHTFREE:
 			{
 				FightContents* fight = (FightContents*)control->_contents;
+				
+				LOG(L"ProxyTrace", LVSYSTEM,
+					L"[FREE] fight=%p num=%d proxy=%p proxy_server=%p",
+					fight,
+					fight->GetContentsNum(),
+					fight->_proxy,
+					fight->_proxy ? fight->_proxy->_server : nullptr);
+
 				server->DeregisterContents(fight->GetContentsNum());
 				server->_fightPool.Free(fight);
 				break;
