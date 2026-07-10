@@ -149,17 +149,17 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 {
 	FighterServer* server = static_cast<FighterServer*>(_mServer);
 
-	LOG(L"ProxyTrace", LVSYSTEM,
-		L"[ENTER] this=%p num=%d session=%lld proxy=%p proxy_server=%p guardA=%llX guardB=%llX size=%zu matched=%d",
-		this,
-		GetContentsNum(),
-		sessionID,
-		_proxy,
-		_proxy ? _proxy->_server : nullptr,
-		_proxy ? _proxy->_guardA : 0ull,
-		_proxy ? _proxy->_guardB : 0ull,
-		_playerMap.size(),
-		_matched);
+	// LOG(L"ProxyTrace", LVSYSTEM,
+	// 	L"[ENTER] this=%p num=%d session=%lld proxy=%p proxy_server=%p guardA=%llX guardB=%llX size=%zu matched=%d",
+	// 	this,
+	// 	GetContentsNum(),
+	// 	sessionID,
+	// 	_proxy,
+	// 	_proxy ? _proxy->_server : nullptr,
+	// 	_proxy ? _proxy->_guardA : 0ull,
+	// 	_proxy ? _proxy->_guardB : 0ull,
+	// 	_playerMap.size(),
+	// 	_matched);
 
 	ReadLock lock(server->_playerMutex);
 	Player* player;

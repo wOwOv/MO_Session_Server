@@ -33,7 +33,7 @@ public:
 	void ConnectServer(void* server)
 	{
 		_server = static_cast<ContentsServer*>(server);
-		TraceProxyServerLink(L"[PROXY-CONNECTSERVER]", _server, this);
+		// TraceProxyServerLink(L"[PROXY-CONNECTSERVER]", _server, this);
 	}
 public:
 //protected:

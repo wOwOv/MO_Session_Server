@@ -312,15 +312,15 @@ void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents)
 		contents->_stub->ConnectServer(this);
 	}
 
-	LOG(L"ProxyTrace", LVSYSTEM,
-		L"[REGISTER] contents=%p num=%d proxy=%p proxy_server=%p guardA=%llX guardB=%llX server=%p",
-		contents,
-		contentsnum,
-		contents->_proxy,
-		contents->_proxy ? contents->_proxy->_server : nullptr,
-		contents->_proxy ? contents->_proxy->_guardA : 0ull,
-		contents->_proxy ? contents->_proxy->_guardB : 0ull,
-		this);
+	// LOG(L"ProxyTrace", LVSYSTEM,
+	// 	L"[REGISTER] contents=%p num=%d proxy=%p proxy_server=%p guardA=%llX guardB=%llX server=%p",
+	// 	contents,
+	// 	contentsnum,
+	// 	contents->_proxy,
+	// 	contents->_proxy ? contents->_proxy->_server : nullptr,
+	// 	contents->_proxy ? contents->_proxy->_guardA : 0ull,
+	// 	contents->_proxy ? contents->_proxy->_guardB : 0ull,
+	// 	this);
 
 	if (contents->_frame != -1)
 	{
@@ -348,9 +348,9 @@ void ContentsServer::InsertToContents(__int64 sessionID, __int32 contentsnum)
 	{
 		Contents* contents = it->second;
 
-		LOG(L"ProxyTrace", LVSYSTEM,
-			L"[INSERT] contents=%p num=%d session=%lld proxy=%p proxy_server=%p",
-			contents, contentsnum, sessionID, contents->_proxy, contents->_proxy ? contents->_proxy->_server : nullptr);
+		// LOG(L"ProxyTrace", LVSYSTEM,
+		// 	L"[INSERT] contents=%p num=%d session=%lld proxy=%p proxy_server=%p",
+		// 	contents, contentsnum, sessionID, contents->_proxy, contents->_proxy ? contents->_proxy->_server : nullptr);
 	}
 	PostQueuedCompletionStatus(_hcp, contentsnum, sessionID, (LPOVERLAPPED)101);
 }
@@ -748,10 +748,10 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 				Contents* contents = tgtc->second;
 
 				SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-				LOG(L"ProxyTrace", LVSYSTEM,
-					L"[101-BEFORE-ENTER] contents=%p num=%d session=%lld proxy=%p proxy_server=%p guardA=%llX guardB=%llX",
-					contents, cbTransferred, (__int64)tgt, contents->_proxy, contents->_proxy ? contents->_proxy->_server : nullptr,
-					contents->_proxy ? contents->_proxy->_guardA : 0ull, contents->_proxy ? contents->_proxy->_guardB : 0ull);
+				// LOG(L"ProxyTrace", LVSYSTEM,
+				// 	L"[101-BEFORE-ENTER] contents=%p num=%d session=%lld proxy=%p proxy_server=%p guardA=%llX guardB=%llX",
+				// 	contents, cbTransferred, (__int64)tgt, contents->_proxy, contents->_proxy ? contents->_proxy->_server : nullptr,
+				// 	contents->_proxy ? contents->_proxy->_guardA : 0ull, contents->_proxy ? contents->_proxy->_guardB : 0ull);
 				contents->OnEnter((__int64)tgt, nullptr);
 				contents->_logicCount++;
 
@@ -771,10 +771,10 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 				Contents* contents = tgtc->second;
 
 				SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-				LOG(L"ProxyTrace", LVSYSTEM,
-					L"[102-BEFORE-LEAVE] contents=%p num=%d session=%lld proxy=%p proxy_server=%p guardA=%llX guardB=%llX",
-					contents, cbTransferred, (__int64)tgt, contents->_proxy, contents->_proxy ? contents->_proxy->_server : nullptr,
-					contents->_proxy ? contents->_proxy->_guardA : 0ull, contents->_proxy ? contents->_proxy->_guardB : 0ull);
+				// LOG(L"ProxyTrace", LVSYSTEM,
+				// 	L"[102-BEFORE-LEAVE] contents=%p num=%d session=%lld proxy=%p proxy_server=%p guardA=%llX guardB=%llX",
+				// 	contents, cbTransferred, (__int64)tgt, contents->_proxy, contents->_proxy ? contents->_proxy->_server : nullptr,
+				// 	contents->_proxy ? contents->_proxy->_guardA : 0ull, contents->_proxy ? contents->_proxy->_guardB : 0ull);
 				contents->OnLeave((__int64)tgt, nullptr);
 				contents->_logicCount++;
 
