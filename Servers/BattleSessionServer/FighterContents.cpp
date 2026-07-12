@@ -269,6 +269,18 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 					_end);
 			}
 			((FightProxy*)_proxy)->ProxySCCreateMe(sessionA, 1, tgt->_id, tgt->_direction, tgt->_x, tgt->_y, tgt->_hp);
+			ProxyTraceBuffer::Write(
+				ProxyTraceTag::EnterAfterCreateMe,
+				this,
+				proxy,
+				proxy ? proxy->_server : nullptr,
+				GetContentsNum(),
+				_debugGeneration,
+				_matched,
+				static_cast<__int32>(_playerMap.size()),
+				_redCount,
+				_blueCount,
+				_end);
 		}
 		std::unordered_map<SessionID, Player*>::iterator oit = _playerMap.begin();
 		for (; oit != _playerMap.end(); oit++)
@@ -302,10 +314,33 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 					_end);
 			}
 			((FightProxy*)_proxy)->ProxySCCreateOther(sessionA, count, tgt->_id, tgt->_direction, tgt->_x, tgt->_y, tgt->_hp);
+			ProxyTraceBuffer::Write(
+				ProxyTraceTag::EnterAfterCreateOther,
+				this,
+				proxy,
+				proxy ? proxy->_server : nullptr,
+				GetContentsNum(),
+				_debugGeneration,
+				_matched,
+				static_cast<__int32>(_playerMap.size()),
+				_redCount,
+				_blueCount,
+				_end);
 		}
 
-		
 	}
+	ProxyTraceBuffer::Write(
+		ProxyTraceTag::EnterEnd,
+		this,
+		proxy,
+		proxy ? proxy->_server : nullptr,
+		GetContentsNum(),
+		_debugGeneration,
+		_matched,
+		static_cast<__int32>(_playerMap.size()),
+		_redCount,
+		_blueCount,
+		_end);
 }
 
 void FightContents::OnLeave(__int64 sessionID, void* extra)

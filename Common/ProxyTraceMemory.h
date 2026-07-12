@@ -16,7 +16,11 @@ enum class ProxyTraceTag : __int32
     Dtor,
 
     Alloc,
-    Init
+    Init,
+
+    EnterAfterCreateMe,
+    EnterAfterCreateOther,
+    EnterEnd
 };
 
 struct ProxyTraceEntry
