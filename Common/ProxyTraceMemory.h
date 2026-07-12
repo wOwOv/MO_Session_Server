@@ -26,7 +26,9 @@ enum class ProxyTraceTag : __int32
     MapDeregister,
 
     LeaveEnd,
-    ReleaseAfterLeave
+    ReleaseAfterLeave,
+
+    FightFreeEnqueue,
 };
 
 struct ProxyTraceEntry

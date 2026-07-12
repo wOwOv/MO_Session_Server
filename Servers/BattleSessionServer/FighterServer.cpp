@@ -327,7 +327,7 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 					fight->_proxy,
 					fight->_proxy ? fight->_proxy->_server : nullptr,
 					fight->GetContentsNum(),
-					0,
+					fight->_debugGeneration,
 					0,
 					0,
 					0,

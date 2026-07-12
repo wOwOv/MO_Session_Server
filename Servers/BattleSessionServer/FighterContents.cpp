@@ -138,7 +138,7 @@ FightContents::~FightContents()
 		_proxy,
 		_proxy ? _proxy->_server : nullptr,
 		GetContentsNum(),
-		0,
+		_debugGeneration,
 		_matched,
 		static_cast<__int32>(_playerMap.size()),
 		_redCount,
@@ -432,6 +432,19 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 		Control* control = server->_controlPool.Alloc();
 		control->_type = CONTROLTYPE::FIGHTFREE;
 		control->_contents = this;
+
+		ProxyTraceBuffer::Write(
+			ProxyTraceTag::FightFreeEnqueue,
+			this,
+			_proxy,
+			_proxy ? _proxy->_server : nullptr,
+			GetContentsNum(),
+			_debugGeneration,
+			_matched,
+			static_cast<__int32>(_playerMap.size()),
+			_redCount,
+			_blueCount,
+			_end);
 
 		server->_ctrlQ.Enqueue(control);
 		server->_ctrlCv.notify_one();
