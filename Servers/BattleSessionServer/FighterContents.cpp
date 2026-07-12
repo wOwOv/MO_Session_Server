@@ -437,7 +437,18 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 		server->_ctrlCv.notify_one();
 		
 	}
-
+	ProxyTraceBuffer::Write(
+		ProxyTraceTag::LeaveEnd,
+		this,
+		_proxy,
+		_proxy ? _proxy->_server : nullptr,
+		GetContentsNum(),
+		_debugGeneration,
+		_matched,
+		static_cast<__int32>(_playerMap.size()),
+		_redCount,
+		_blueCount,
+		_end);
 }
 
 void FightContents::OnUpdate()

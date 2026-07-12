@@ -1193,6 +1193,18 @@ bool ContentsServer::Release(SESSION* tgt)
 				0,
 				0);
 			contents->OnLeave(tgt->_sessionID, nullptr);
+			ProxyTraceBuffer::Write(
+				ProxyTraceTag::ReleaseAfterLeave,
+				contents,
+				contents->_proxy,
+				contents->_proxy ? contents->_proxy->_server : nullptr,
+				tgt->_contentsNum,
+				tgt->_sessionID,
+				0,
+				0,
+				0,
+				0,
+				0);
 		}
 	}
 
