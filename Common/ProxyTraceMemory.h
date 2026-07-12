@@ -14,6 +14,9 @@ enum class ProxyTraceTag : __int32
     UpdateNull,
     CtrlFree,
     Dtor,
+
+    Alloc,
+    Init
 };
 
 struct ProxyTraceEntry

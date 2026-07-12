@@ -426,6 +426,7 @@ void FightContents::OnUpdate()
 			_redCount,
 			_blueCount,
 			_end);
+		__debugbreak();
 	}
 	//frameCount++;
 	//框流烙 肺流贸府
@@ -536,6 +537,18 @@ void FightContents::OnShutDown()
 void FightContents::Init(__int64 matchID)
 {
 	_matchID = matchID;
+	ProxyTraceBuffer::Write(
+		ProxyTraceTag::Init,
+		this,
+		_proxy,
+		_proxy ? _proxy->_server : nullptr,
+		GetContentsNum(),
+		_debugGeneration,
+		_matched,
+		static_cast<__int32>(_playerMap.size()),
+		_redCount,
+		_blueCount,
+		_end);
 }
 
 void FightContents::Clear()

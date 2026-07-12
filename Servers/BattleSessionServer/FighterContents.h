@@ -52,4 +52,6 @@ private:
 
 	bool _end = 1;//1이면 끄기 진행 전 0이면 끄기 진행 중
 	friend class StubForFight;
+public:
+	long _debugGeneration = 0;// debug: increments each time the pool reassigns this object
 };

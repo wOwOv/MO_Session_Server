@@ -281,6 +281,20 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 			case CONTROLTYPE::FIGHTALLOC:
 			{
 				FightContents* contents = server->_fightPool.Alloc();
+				contents->_debugGeneration++;
+
+				ProxyTraceBuffer::Write(
+					ProxyTraceTag::Alloc,
+					contents,
+					contents ? contents->_proxy : nullptr,
+					(contents && contents->_proxy) ? contents->_proxy->_server : nullptr,
+					contents ? contents->GetContentsNum() : -1,
+					contents ? contents->_debugGeneration : 0,
+					0,
+					0,
+					0,
+					0,
+					0);
 				contents->Clear();
 				contents->Init(server->CreateMatchID());
 				contents->SetContentsNum(cnum);
