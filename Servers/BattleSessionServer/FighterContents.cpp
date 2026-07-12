@@ -3,6 +3,7 @@
 #include "CPacket.h"
 #include"FighterSubStub.h"
 #include "FighterProxy.h"
+#include "ProxyTraceMemory.h"
 
 
 MatchContents::MatchContents():Contents(MATCH,-1)
@@ -131,6 +132,19 @@ FightContents::FightContents():Contents(0,20)
 
 FightContents::~FightContents()
 {
+	ProxyTraceBuffer::Write(
+		ProxyTraceTag::Dtor,
+		this,
+		_proxy,
+		_proxy ? _proxy->_server : nullptr,
+		GetContentsNum(),
+		0,
+		_matched,
+		static_cast<__int32>(_playerMap.size()),
+		_redCount,
+		_blueCount,
+		_end);
+
 	IStub* stub = DetachStub();
 	delete stub;
 	IProxy* proxy = DetachProxy();
@@ -139,6 +153,21 @@ FightContents::~FightContents()
 
 void FightContents::OnEnter(__int64 sessionID, void* extra)
 {
+	FightProxy* proxy = static_cast<FightProxy*>(_proxy);
+
+	ProxyTraceBuffer::Write(
+		ProxyTraceTag::Enter,
+		this,
+		proxy,
+		proxy ? proxy->_server : nullptr,
+		GetContentsNum(),
+		sessionID,
+		_matched,
+		static_cast<__int32>(_playerMap.size()),
+		_redCount,
+		_blueCount,
+		_end);
+
 	FighterServer* server = static_cast<FighterServer*>(_mServer);
 	ReadLock lock(server->_playerMutex);
 	Player* player;
@@ -224,6 +253,21 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 			}
 			__int64 sessionA[1] = { tgt->_sessionID };
 			int count = 1;
+			if (proxy == nullptr || proxy->_server == nullptr)
+			{
+				ProxyTraceBuffer::Write(
+					ProxyTraceTag::EnterSkipNull,
+					this,
+					proxy,
+					proxy ? proxy->_server : nullptr,
+					GetContentsNum(),
+					sessionID,
+					_matched,
+					static_cast<__int32>(_playerMap.size()),
+					_redCount,
+					_blueCount,
+					_end);
+			}
 			((FightProxy*)_proxy)->ProxySCCreateMe(sessionA, 1, tgt->_id, tgt->_direction, tgt->_x, tgt->_y, tgt->_hp);
 		}
 		std::unordered_map<SessionID, Player*>::iterator oit = _playerMap.begin();
@@ -242,6 +286,21 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 					count++;
 				}
 			}
+			if (proxy == nullptr || proxy->_server == nullptr)
+			{
+				ProxyTraceBuffer::Write(
+					ProxyTraceTag::EnterSkipNull,
+					this,
+					proxy,
+					proxy ? proxy->_server : nullptr,
+					GetContentsNum(),
+					sessionID,
+					_matched,
+					static_cast<__int32>(_playerMap.size()),
+					_redCount,
+					_blueCount,
+					_end);
+			}
 			((FightProxy*)_proxy)->ProxySCCreateOther(sessionA, count, tgt->_id, tgt->_direction, tgt->_x, tgt->_y, tgt->_hp);
 		}
 
@@ -251,6 +310,21 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 
 void FightContents::OnLeave(__int64 sessionID, void* extra)
 {
+	FightProxy* proxy = static_cast<FightProxy*>(_proxy);
+
+	ProxyTraceBuffer::Write(
+		ProxyTraceTag::Leave,
+		this,
+		proxy,
+		proxy ? proxy->_server : nullptr,
+		GetContentsNum(),
+		sessionID,
+		_matched,
+		static_cast<__int32>(_playerMap.size()),
+		_redCount,
+		_blueCount,
+		_end);
+
 	std::unordered_map<SessionID, Player*>::iterator it = _playerMap.find(sessionID);
 	if (it == _playerMap.end())
 	{
@@ -278,6 +352,21 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 		{
 			sessionA[count++] = tgt->_sessionID;
 		}
+	}
+	if (proxy == nullptr || proxy->_server == nullptr)
+	{
+		ProxyTraceBuffer::Write(
+			ProxyTraceTag::LeaveSkipNull,
+			this,
+			proxy,
+			proxy ? proxy->_server : nullptr,
+			GetContentsNum(),
+			sessionID,
+			_matched,
+			static_cast<__int32>(_playerMap.size()),
+			_redCount,
+			_blueCount,
+			_end);
 	}
 	((FightProxy*)_proxy)->ProxySCDelete(sessionA, count, player->_id);
 
@@ -323,6 +412,21 @@ void FightContents::OnUpdate()
 	DWORD remain = deltatime % 20;
 	_oldTick += (deltatime - remain);
 
+	if (_proxy != nullptr && _proxy->_server == nullptr)
+	{
+		ProxyTraceBuffer::Write(
+			ProxyTraceTag::UpdateNull,
+			this,
+			_proxy,
+			_proxy ? _proxy->_server : nullptr,
+			GetContentsNum(),
+			0,
+			_matched,
+			static_cast<__int32>(_playerMap.size()),
+			_redCount,
+			_blueCount,
+			_end);
+	}
 	//frameCount++;
 	//框流烙 肺流贸府
 	std::unordered_map<SessionID,Player*>::iterator moveit = _playerMap.begin();

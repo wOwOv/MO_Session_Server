@@ -9,6 +9,7 @@
 #include "Logger.h"
 #include <conio.h>
 #include "SRWLockGuard.h"
+#include "ProxyTraceMemory.h"
 
 ContentsServer::ContentsServer(ServerType type) : _type(type)
 {
@@ -304,10 +305,34 @@ void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents)
 	if (contents->_proxy != nullptr)
 	{
 		contents->_proxy->ConnectServer(this);
+		ProxyTraceBuffer::Write(
+			ProxyTraceTag::RegisterContents,
+			contents,
+			contents->_proxy,
+			contents->_proxy ? contents->_proxy->_server : nullptr,
+			contentsnum,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0);
 	}
 	if (contents->_stub != nullptr)
 	{
 		contents->_stub->ConnectServer(this);
+		ProxyTraceBuffer::Write(
+			ProxyTraceTag::RegisterContents,
+			contents,
+			contents->_proxy,
+			contents->_proxy ? contents->_proxy->_server : nullptr,
+			contentsnum,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0);
 	}
 	if (contents->_frame != -1)
 	{
@@ -1107,6 +1132,18 @@ bool ContentsServer::Release(SESSION* tgt)
 		{
 			Contents* contents = tgtc->second;
 			SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+			ProxyTraceBuffer::Write(
+				ProxyTraceTag::ReleaseBeforeLeave,
+				contents,
+				contents->_proxy,
+				contents->_proxy ? contents->_proxy->_server : nullptr,
+				tgt->_contentsNum,
+				tgt->_sessionID,
+				0,
+				0,
+				0,
+				0,
+				0);
 			contents->OnLeave(tgt->_sessionID, nullptr);
 		}
 	}
