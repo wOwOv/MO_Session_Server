@@ -343,6 +343,28 @@ void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents)
 
 void ContentsServer::DeregisterContents(__int32 contentsnum)
 {
+	Contents* mappedContents = nullptr;
+
+	auto it = _contentsMap.find(contentsnum);
+	if (it != _contentsMap.end())
+	{
+		mappedContents = it->second;
+	}
+
+	ProxyTraceBuffer::Write(
+		ProxyTraceTag::MapDeregister,
+		mappedContents,
+		mappedContents ? mappedContents->_proxy : nullptr,
+		(mappedContents && mappedContents->_proxy) ? mappedContents->_proxy->_server : nullptr,
+		contentsnum,
+		reinterpret_cast<__int64>(mappedContents),
+		0,
+		0,
+		0,
+		0,
+		0);
+
+
 	SRWExclusiveLockGuard guard(_mapKey);
 	_contentsMap.erase(contentsnum);
 }
@@ -784,13 +806,39 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 		{
 			int frame = 0;
 			{
+				Contents* mappedContents = nullptr;
+				__int32 contentsNum = cbTransferred;
+
 				SRWSharedLockGuard mapGuard(server->_mapKey);
 
 				std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
 				if (tgtc != server->_contentsMap.end())
 				{
 					Contents* contents = tgtc->second;
+					mappedContents = tgtc->second;
+
 					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+
+					ProxyTraceBuffer::Write(
+						ProxyTraceTag::MapUpdateCheck,
+						contents,
+						contents->_proxy,
+						contents->_proxy ? contents->_proxy->_server : nullptr,
+						contentsNum,
+						reinterpret_cast<__int64>(mappedContents),
+						0,
+						0,
+						0,
+						0,
+						0);
+
+					if (contentsNum == 3 &&
+						contents->_proxy != nullptr &&
+						contents->_proxy->_server == nullptr)
+					{
+						__debugbreak();
+					}
+
 					contents->OnUpdate();
 					contents->_fpsCount++;
 					frame = contents->_frame;

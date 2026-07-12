@@ -20,7 +20,10 @@ enum class ProxyTraceTag : __int32
 
     EnterAfterCreateMe,
     EnterAfterCreateOther,
-    EnterEnd
+    EnterEnd,
+
+    MapUpdateCheck,
+    MapDeregister
 };
 
 struct ProxyTraceEntry
