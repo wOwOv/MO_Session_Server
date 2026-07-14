@@ -14,7 +14,7 @@ class LFStack
 	};
 
 public:
-	LFStack() :_top(nullptr),_nodepool(0), _size(0)
+	LFStack() :_top(nullptr), _size(0)
 	{
 	}
 

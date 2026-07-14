@@ -7,8 +7,6 @@
 #include <memory>
 #include <mutex>
 
-static unsigned long Cookie = 0x01010100;
-
 template <class DATA>
 class TlsMemoryPool
 {
@@ -35,8 +33,12 @@ private:
 
 public:
 
-	TlsMemoryPool(int BlockNum=500, int chunksize=500,bool PlacementNew = false, bool maxflag = false)
+	TlsMemoryPool(int chunkSize=500, bool PlacementNew = false)
 	{
+		if (chunkSize <= 0)
+		{
+			DebugBreak();
+		}
 		_tlsIndex = TlsAlloc();
 		if (_tlsIndex == TLS_OUT_OF_INDEXES)
 		{
@@ -44,10 +46,8 @@ public:
 		}
 
 		_pnFlag = PlacementNew;
-		_maxCount = BlockNum;
-		_maxFlag = maxflag;
 
-		_chunkSize = chunksize;
+		_chunkSize = chunkSize;
 
 		_capacity = 0;
 		_usingCount = 0;
@@ -85,35 +85,6 @@ public:
 				std::lock_guard<std::mutex > lock(_tlsmutex);
 				_tlsPools.emplace_back(tpool);
 			}
-
-			//생성자 호출한 상태로 들어가야함
-			Node* chunk = nullptr;
-			if (_pnFlag)
-			{
-				chunk = static_cast<Node*>(::operator new(sizeof(Node) * _maxCount));
-			}
-			else
-			{
-				chunk = new Node[_maxCount];
-			}
-			{
-				std::lock_guard<std::mutex > lock(_mutex);
-				_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
-			}
-			//100번->0번 순서, 0번노드는 과거 헤드를 next로 가져야함
-			for (int i = 1; i < _maxCount; ++i)
-			{
-				Node* node = &chunk[i];
-				node->_next = &chunk[i - 1];
-			}
-			Node* newhead = &chunk[_maxCount - 1];
-			Node* lastnode = &chunk[0];
-			lastnode->_next = nullptr;
-
-			tpool->_nodelist = newhead;
-			tpool->_nodeCount = _maxCount;
-			tpool->_storedCount = tpool->_nodeCount+tpool->_freeCount;
-			InterlockedAdd((long*) & _capacity, _maxCount);
 			TlsSetValue(_tlsIndex, (LPVOID)tpool);
 		}
 
@@ -144,7 +115,7 @@ public:
 		//공용풀에서 받아와야한다면
 		else
 		{
-			Node* nodechunk = GetBucket();
+			Node* nodechunk = GetChunk();
 			//공용풀에서 노드묶음 받아옴
 			if (nodechunk != nullptr)
 			{
@@ -203,31 +174,10 @@ public:
 			tpool->_freelist = nullptr;
 			tpool->_freeCount = 0;
 			tpool->_storedCount = 0;
-
-			//생성자 호출한 상태로 들어가야함
-			if (_pnFlag == 0)
 			{
-				for (int i = 0; i < _maxCount; i++)
-				{
-					Node* node = new Node;
-
-					node->_next = tpool->_nodelist;
-					tpool->_nodelist = node;
-				}
+				std::lock_guard<std::mutex > lock(_tlsmutex);
+				_tlsPools.emplace_back(tpool);
 			}
-			else//생성자 호출 없이 들어가야함
-			{
-				for (int i = 0; i < _maxCount; i++)
-				{
-					Node* node = (Node*)malloc(sizeof(Node));
-					node->_next = tpool->_nodelist;
-					tpool->_nodelist = node;
-				}
-			}
-
-			tpool->_nodeCount = _maxCount;
-			tpool->_storedCount = tpool->_nodeCount + tpool->_freeCount;
-
 			TlsSetValue(_tlsIndex, (LPVOID)tpool);
 		}
 
@@ -254,7 +204,7 @@ public:
 			//freelist가 다 찼다면
 			if (tpool->_freeCount ==  _chunkSize)
 			{
-				ReturnBucket(tpool->_freelist);
+				ReturnChunk(tpool->_freelist);
 				tpool->_freelist = nullptr;
 				tpool->_freeCount = 0;
 			}
@@ -294,22 +244,22 @@ public:
 	
 //Bucket 스택에서 얻어보고 반환할 때 쓰는 함수
 private:
-	__forceinline void ReturnBucket(Node* nodechunk)
+	__forceinline void ReturnChunk(Node* nodechunk)
 	{
 		Chunk* chunk = (Chunk*)nodechunk;
 		unsigned long long tagadr = (unsigned long long)chunk;
 		unsigned long long tag = InterlockedIncrement16(&_key);
 		tagadr |= (tag << 48);
-		Chunk* tagbucket = (Chunk*)tagadr;
+		Chunk* tagchunk = (Chunk*)tagadr;
 		Chunk* oldtop;
 		do
 		{
 			oldtop = _top;
 			chunk->_chunknext = oldtop;
-		} while (InterlockedCompareExchange64((__int64*)&_top, (__int64)tagbucket, (__int64)oldtop) != (__int64)oldtop);
+		} while (InterlockedCompareExchange64((__int64*)&_top, (__int64)tagchunk, (__int64)oldtop) != (__int64)oldtop);
 		InterlockedIncrement(&_chunkCount);
 	}
-	__forceinline Node* GetBucket()
+	__forceinline Node* GetChunk()
 	{
 		Chunk* oldtop;
 		Chunk* newtop;
@@ -337,12 +287,7 @@ private:
 	}
 
 private:
-	long long _position;
-
 	bool _pnFlag;
-	int _maxCount;
-	bool _maxFlag;
-
 	unsigned int _chunkSize;
 	
 	unsigned long _capacity;
@@ -351,7 +296,7 @@ private:
 	DWORD _tlsIndex = 0;
 	
 	Chunk* _top;							//Chunk Top
-	unsigned long _chunkCount;				//보관 중인 chunk개수
+	long _chunkCount;				//보관 중인 chunk개수
 	short _key;								//tag
 
 private:

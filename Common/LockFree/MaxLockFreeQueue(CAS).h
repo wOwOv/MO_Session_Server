@@ -163,7 +163,7 @@ private:
 };
 
 template <class DATA>
-TlsMemoryPool<typename MAXLFQueue<DATA>::Node> MAXLFQueue<DATA>::_nodepool(100, 500);
+TlsMemoryPool<typename MAXLFQueue<DATA>::Node> MAXLFQueue<DATA>::_nodepool;
 
 
 
