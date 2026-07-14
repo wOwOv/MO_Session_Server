@@ -95,7 +95,7 @@ void ContentsServer::ShowServerInfo()
 		break;
 	}
 	}
-	printf("Session : %d\nAcceptTotal : %d\nAcceptTPS : %d\nRecvTPS : %d\nSendTPS: %d\nSBufferCapacity : %d\nSBufferUsing : %d\n"
+	printf("Session : %d\nAcceptTotal : %lld\nAcceptTPS : %d\nRecvTPS : %d\nSendTPS: %d\nSBufferCapacity : %d\nSBufferUsing : %d\n"
 	,GetSessionCount(),GetAcceptTotal(),GetAcceptTPS(),GetRecvMessageTPS(),GetSendMessageTPS(),GetSBufferCapacity(),GetSBufferUsingCount());
 }
 
@@ -759,13 +759,19 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 		{
 			int frame = 0;
 			{
+				Contents* mappedContents = nullptr;
+				__int32 contentsNum = cbTransferred;
+
 				SRWSharedLockGuard mapGuard(server->_mapKey);
 
 				std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
 				if (tgtc != server->_contentsMap.end())
 				{
 					Contents* contents = tgtc->second;
+					mappedContents = tgtc->second;
+
 					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+
 					contents->OnUpdate();
 					contents->_fpsCount++;
 					frame = contents->_frame;

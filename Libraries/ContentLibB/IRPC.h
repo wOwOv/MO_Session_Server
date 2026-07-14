@@ -7,6 +7,7 @@ class ContentsServer;
 class IStub
 {
 public:
+	virtual ~IStub() = default;
 	virtual void ProcMessage(__int64 sessionID, CPacket packet) = 0;
 	void ConnectServer(void* server)
 	{
@@ -24,6 +25,7 @@ protected:
 class IProxy
 {
 public:
+	virtual ~IProxy() = default;
 	void ConnectServer(void* server)
 	{
 		_server = static_cast<ContentsServer*>(server);

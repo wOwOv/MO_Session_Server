@@ -152,7 +152,7 @@ private:
 };
 
 template <class DATA>
-TlsMemoryPool<typename LFQueue<DATA>::Node> LFQueue<DATA>::_nodepool(100, 500);
+TlsMemoryPool<typename LFQueue<DATA>::Node> LFQueue<DATA>::_nodepool;
 
 
 

@@ -1,3 +1,3 @@
 #include "SerialBuffer.h"
 
-TlsMemoryPool<SBuffer> SBuffer::BufPool(500, 500);
+TlsMemoryPool<SBuffer> SBuffer::BufPool;

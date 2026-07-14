@@ -245,7 +245,6 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 			((FightProxy*)_proxy)->ProxySCCreateOther(sessionA, count, tgt->_id, tgt->_direction, tgt->_x, tgt->_y, tgt->_hp);
 		}
 
-		
 	}
 }
 
@@ -313,7 +312,6 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 		server->_ctrlCv.notify_one();
 		
 	}
-
 }
 
 void FightContents::OnUpdate()
