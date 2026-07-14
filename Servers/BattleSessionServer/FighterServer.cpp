@@ -3,7 +3,6 @@
 #include "BattleDB.h"
 #include <thread>
 #include <mutex>
-#include "ProxyTraceMemory.h"
 
 
 FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
@@ -281,20 +280,6 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 			case CONTROLTYPE::FIGHTALLOC:
 			{
 				FightContents* contents = server->_fightPool.Alloc();
-				contents->_debugGeneration++;
-
-				ProxyTraceBuffer::Write(
-					ProxyTraceTag::Alloc,
-					contents,
-					contents ? contents->_proxy : nullptr,
-					(contents && contents->_proxy) ? contents->_proxy->_server : nullptr,
-					contents ? contents->GetContentsNum() : -1,
-					contents ? contents->_debugGeneration : 0,
-					0,
-					0,
-					0,
-					0,
-					0);
 				contents->Clear();
 				contents->Init(server->CreateMatchID());
 				contents->SetContentsNum(cnum);
@@ -320,20 +305,6 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 			case CONTROLTYPE::FIGHTFREE:
 			{
 				FightContents* fight = (FightContents*)control->_contents;
-
-				ProxyTraceBuffer::Write(
-					ProxyTraceTag::CtrlFree,
-					fight,
-					fight->_proxy,
-					fight->_proxy ? fight->_proxy->_server : nullptr,
-					fight->GetContentsNum(),
-					fight->_debugGeneration,
-					0,
-					0,
-					0,
-					0,
-					0);
-
 				server->DeregisterContents(fight->GetContentsNum());
 				server->_fightPool.Free(fight);
 				break;

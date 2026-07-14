@@ -57,8 +57,7 @@ private:
 	unsigned long _logic;
 	unsigned long _logicCount;
 
-public:
-//protected:
+protected:
 	ContentsServer* _mServer=nullptr;	// // non-owning back-reference to ContentsServer
 	IStub* _stub=nullptr;		// owning; deleted by derived content class
 	IProxy* _proxy = nullptr;	// owning; deleted by derived content class

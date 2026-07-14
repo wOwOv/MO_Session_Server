@@ -339,7 +339,7 @@ private:
 			_chunks.emplace_back(chunk, ChunkDeleter{ _pnFlag });
 		}
 		//100번->0번 순서, 0번노드는 과거 헤드를 next로 가져야함
-		for (int i = 1; i < _chunkSize; ++i)
+		for (unsigned int i = 1; i < _chunkSize; ++i)
 		{
 			Node* node = &chunk[i];
 			node->_next = &chunk[i - 1];

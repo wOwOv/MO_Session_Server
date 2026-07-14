@@ -9,7 +9,6 @@
 #include "Logger.h"
 #include <conio.h>
 #include "SRWLockGuard.h"
-#include "ProxyTraceMemory.h"
 
 ContentsServer::ContentsServer(ServerType type) : _type(type)
 {
@@ -96,7 +95,7 @@ void ContentsServer::ShowServerInfo()
 		break;
 	}
 	}
-	printf("Session : %d\nAcceptTotal : %d\nAcceptTPS : %d\nRecvTPS : %d\nSendTPS: %d\nSBufferCapacity : %d\nSBufferUsing : %d\n"
+	printf("Session : %d\nAcceptTotal : %lld\nAcceptTPS : %d\nRecvTPS : %d\nSendTPS: %d\nSBufferCapacity : %d\nSBufferUsing : %d\n"
 	,GetSessionCount(),GetAcceptTotal(),GetAcceptTPS(),GetRecvMessageTPS(),GetSendMessageTPS(),GetSBufferCapacity(),GetSBufferUsingCount());
 }
 
@@ -305,34 +304,10 @@ void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents)
 	if (contents->_proxy != nullptr)
 	{
 		contents->_proxy->ConnectServer(this);
-		ProxyTraceBuffer::Write(
-			ProxyTraceTag::RegisterContents,
-			contents,
-			contents->_proxy,
-			contents->_proxy ? contents->_proxy->_server : nullptr,
-			contentsnum,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0);
 	}
 	if (contents->_stub != nullptr)
 	{
 		contents->_stub->ConnectServer(this);
-		ProxyTraceBuffer::Write(
-			ProxyTraceTag::RegisterContents,
-			contents,
-			contents->_proxy,
-			contents->_proxy ? contents->_proxy->_server : nullptr,
-			contentsnum,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0);
 	}
 	if (contents->_frame != -1)
 	{
@@ -343,28 +318,6 @@ void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents)
 
 void ContentsServer::DeregisterContents(__int32 contentsnum)
 {
-	Contents* mappedContents = nullptr;
-
-	auto it = _contentsMap.find(contentsnum);
-	if (it != _contentsMap.end())
-	{
-		mappedContents = it->second;
-	}
-
-	ProxyTraceBuffer::Write(
-		ProxyTraceTag::MapDeregister,
-		mappedContents,
-		mappedContents ? mappedContents->_proxy : nullptr,
-		(mappedContents && mappedContents->_proxy) ? mappedContents->_proxy->_server : nullptr,
-		contentsnum,
-		reinterpret_cast<__int64>(mappedContents),
-		0,
-		0,
-		0,
-		0,
-		0);
-
-
 	SRWExclusiveLockGuard guard(_mapKey);
 	_contentsMap.erase(contentsnum);
 }
@@ -819,26 +772,6 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 
 					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
 
-					ProxyTraceBuffer::Write(
-						ProxyTraceTag::MapUpdateCheck,
-						contents,
-						contents->_proxy,
-						contents->_proxy ? contents->_proxy->_server : nullptr,
-						contentsNum,
-						reinterpret_cast<__int64>(mappedContents),
-						0,
-						0,
-						0,
-						0,
-						0);
-
-					if (contentsNum == 3 &&
-						contents->_proxy != nullptr &&
-						contents->_proxy->_server == nullptr)
-					{
-						__debugbreak();
-					}
-
 					contents->OnUpdate();
 					contents->_fpsCount++;
 					frame = contents->_frame;
@@ -1180,31 +1113,7 @@ bool ContentsServer::Release(SESSION* tgt)
 		{
 			Contents* contents = tgtc->second;
 			SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-			ProxyTraceBuffer::Write(
-				ProxyTraceTag::ReleaseBeforeLeave,
-				contents,
-				contents->_proxy,
-				contents->_proxy ? contents->_proxy->_server : nullptr,
-				tgt->_contentsNum,
-				tgt->_sessionID,
-				0,
-				0,
-				0,
-				0,
-				0);
 			contents->OnLeave(tgt->_sessionID, nullptr);
-			ProxyTraceBuffer::Write(
-				ProxyTraceTag::ReleaseAfterLeave,
-				contents,
-				contents->_proxy,
-				contents->_proxy ? contents->_proxy->_server : nullptr,
-				tgt->_contentsNum,
-				tgt->_sessionID,
-				0,
-				0,
-				0,
-				0,
-				0);
 		}
 	}
 

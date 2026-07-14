@@ -31,8 +31,7 @@ public:
 		_server = static_cast<ContentsServer*>(server);
 	}
 
-public:
-//protected:
+protected:
 	ContentsServer* _server=nullptr;
 };
 
