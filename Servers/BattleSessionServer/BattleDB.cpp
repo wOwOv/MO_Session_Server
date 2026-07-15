@@ -57,6 +57,12 @@ BattleDB::BattleDB(DBConnector& db):_db(db)
 
 bool BattleDB::SaveBattleResult(const BattleResult & result)
 {
+	LOG(L"Database", LVSYSTEM,
+		L"SaveBattleResult match=%llu winner=%d red=(%llu,%llu,%llu) blue=(%llu,%llu,%llu)",
+		result._matchID,
+		result._winnerTeam,
+		result._red[0], result._red[1], result._red[2],
+		result._blue[0], result._blue[1], result._blue[2]);
 	if (!_db.BeginTransaction())
 	{
 		LOG(L"Database", LVSYSTEM,

@@ -80,7 +80,8 @@ bool DBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 	ULONGLONG time = GetTickCount64() - start;
 	if (_queryStat != 0)
 	{
-		
+		LogMysqlError(L"Mysql query error", mysql_error(&_conn));
+
 		return false;
 	}
 
