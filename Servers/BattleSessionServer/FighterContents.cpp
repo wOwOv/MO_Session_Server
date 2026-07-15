@@ -327,103 +327,15 @@ void FightContents::OnUpdate()
 	_oldTick += (deltatime - remain);
 
 	//움직임 로직처리
-	std::unordered_map<SessionID,Player*>::iterator moveit = _playerMap.begin();
+	const int frameCount = static_cast<int>(frame);
+
+	std::unordered_map<SessionID, Player*>::iterator moveit = _playerMap.begin();
 	for (; moveit != _playerMap.end(); moveit++)
 	{
 		Player* player = moveit->second;
 		if (player->_move != -1)
 		{
-			switch (player->_move)
-			{
-			case  dfPACKET_MOVE_DIR_LL:
-			{
-				if (player->_x > dfRANGE_MOVE_LEFT + 3)
-				{
-					player->_x -= 3 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_LU:
-			{
-				//왼쪽에 닿거나 위에 닿았을때
-				if (player->_x <= dfRANGE_MOVE_LEFT + 3 || player->_y <= dfRANGE_MOVE_TOP)
-				{
-					//이동하면 안됨
-				}
-				else
-				{
-					player->_x -= 3 * frame;
-					player->_y -= 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_UU:
-			{
-				if (player->_y > dfRANGE_MOVE_TOP)
-				{
-					player->_y -= 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_RU:
-			{
-				//오른쪽에 닿거나 위에 닿았을때
-				if (player->_x >= dfRANGE_MOVE_RIGHT - 3 || player->_y <= dfRANGE_MOVE_TOP)
-				{
-					//이동하면 안됨
-				}
-				else
-				{
-					player->_x += 3 * frame;
-					player->_y -= 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_RR:
-			{
-				if (player->_x < dfRANGE_MOVE_RIGHT - 3)
-				{
-					player->_x += 3 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_RD:
-			{
-				//오른쪽에 닿거나 아래에 닿았을때
-				if (player->_x >= dfRANGE_MOVE_RIGHT - 3 || player->_y >= dfRANGE_MOVE_BOTTOM)
-				{
-					//이동하면 안됨
-				}
-				else
-				{
-					player->_x += 3 * frame;
-					player->_y += 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_DD:
-			{
-				if (player->_y < dfRANGE_MOVE_BOTTOM)
-				{
-					player->_y += 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_LD:
-			{
-				//왼쪽에 닿거나 아래에 닿았을때
-				if (player->_x <= dfRANGE_MOVE_LEFT + 3 || player->_y >= dfRANGE_MOVE_BOTTOM)
-				{
-					//이동하면 안됨
-				}
-				else
-				{
-					player->_x -= 3 * frame;
-					player->_y += 2 * frame;
-				}
-				break;
-			}
-			}
+			ApplyMovement(*player, frameCount);
 		}
 	}
 }
@@ -472,4 +384,107 @@ bool FightContents::CheckGameEnd()
 		return true;
 	}
 	return false;
+}
+
+void FightContents::ApplyMovement(Player& player, int frame)
+{
+	if (frame <= 0)
+	{
+		return;
+	}
+
+	const int currentX = static_cast<int>(player._x);
+	const int currentY = static_cast<int>(player._y);
+
+	int newX = currentX;
+	int newY = currentY;
+
+	switch (player._move)
+	{
+	case dfPACKET_MOVE_DIR_LL:
+	{
+		const int maxFrameX = (currentX - dfRANGE_MOVE_LEFT) / 3;
+		const int moveFrame = (frame < maxFrameX) ? frame : maxFrameX;
+		newX = currentX - 3 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_UU:
+	{
+		const int maxFrameY = (currentY - dfRANGE_MOVE_TOP) / 2;
+		const int moveFrame = (frame < maxFrameY) ? frame : maxFrameY;
+		newY = currentY - 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_RR:
+	{
+		const int maxFrameX = (dfRANGE_MOVE_RIGHT - currentX) / 3;
+		const int moveFrame = (frame < maxFrameX) ? frame : maxFrameX;
+		newX = currentX + 3 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_DD:
+	{
+		const int maxFrameY = (dfRANGE_MOVE_BOTTOM - currentY) / 2;
+		const int moveFrame = (frame < maxFrameY) ? frame : maxFrameY;
+		newY = currentY + 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_LU:
+	{
+		const int maxFrameX = (currentX - dfRANGE_MOVE_LEFT) / 3;
+		const int maxFrameY = (currentY - dfRANGE_MOVE_TOP) / 2;
+		int moveFrame = maxFrameX < maxFrameY ? maxFrameX : maxFrameY;
+		moveFrame = frame < moveFrame ? frame : moveFrame;
+
+		newX = currentX - 3 * moveFrame;
+		newY = currentY - 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_RU:
+	{
+		const int maxFrameX = (dfRANGE_MOVE_RIGHT - currentX) / 3;
+		const int maxFrameY = (currentY - dfRANGE_MOVE_TOP) / 2;
+		int moveFrame = maxFrameX < maxFrameY ? maxFrameX : maxFrameY;
+		moveFrame = frame < moveFrame ? frame : moveFrame;
+
+		newX = currentX + 3 * moveFrame;
+		newY = currentY - 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_RD:
+	{
+		const int maxFrameX = (dfRANGE_MOVE_RIGHT - currentX) / 3;
+		const int maxFrameY = (dfRANGE_MOVE_BOTTOM - currentY) / 2;
+		int moveFrame = maxFrameX < maxFrameY ? maxFrameX : maxFrameY;
+		moveFrame = frame < moveFrame ? frame : moveFrame;
+
+		newX = currentX + 3 * moveFrame;
+		newY = currentY + 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_LD:
+	{
+		const int maxFrameX = (currentX - dfRANGE_MOVE_LEFT) / 3;
+		const int maxFrameY = (dfRANGE_MOVE_BOTTOM - currentY) / 2;
+		int moveFrame = maxFrameX < maxFrameY ? maxFrameX : maxFrameY;
+		moveFrame = frame < moveFrame ? frame : moveFrame;
+
+		newX = currentX - 3 * moveFrame;
+		newY = currentY + 2 * moveFrame;
+		break;
+	}
+
+	default:
+		return;
+	}
+
+	player._x = static_cast<std::uint16_t>(newX);
+	player._y = static_cast<std::uint16_t>(newY);
 }
