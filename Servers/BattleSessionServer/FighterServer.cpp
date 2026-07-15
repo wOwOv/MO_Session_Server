@@ -114,7 +114,7 @@ int FighterServer::GetControlQSize()
 int FighterServer::GetPlayerCount()
 {
 	std::lock_guard<std::shared_mutex> lock(_playerMutex);
-	return _playerMap.size();
+	return static_cast<int>(_playerMap.size());
 }
 
 int FighterServer::GetPlayerPoolCapacity()

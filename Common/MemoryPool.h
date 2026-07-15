@@ -1,4 +1,4 @@
-#ifndef  __MEMORYPOOL__
+﻿#ifndef  __MEMORYPOOL__
 #define  __MEMORYPOOL__
 #include <new>
 #include <windows.h>
@@ -189,13 +189,11 @@ public:
 
 private:
 	Node* _head;
-	alignas(64) unsigned long _capacity;
-	unsigned long _usingCount;
+	long _capacity;
+	long _usingCount;
 	bool _pnFlag;
 
-	long long _position;
-
-	int _maxcount;
+	long _maxcount;
 	bool _maxFlag;
 
 	short _key;

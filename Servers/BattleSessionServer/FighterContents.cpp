@@ -326,7 +326,6 @@ void FightContents::OnUpdate()
 	DWORD remain = deltatime % 20;
 	_oldTick += (deltatime - remain);
 
-	//frameCount++;
 	//框流烙 肺流贸府
 	std::unordered_map<SessionID,Player*>::iterator moveit = _playerMap.begin();
 	for (; moveit != _playerMap.end(); moveit++)
