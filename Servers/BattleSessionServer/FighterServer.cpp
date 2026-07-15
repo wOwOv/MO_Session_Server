@@ -281,8 +281,7 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 			{
 				FightContents* contents = server->_fightPool.Alloc();
 				contents->Clear();
-				contents->Init(server->CreateMatchID());
-				contents->SetContentsNum(cnum);
+				contents->Init(cnum,server->CreateMatchID(),control->_group);
 
 				server->RegisterContents(cnum, contents);
 				for (int i = 0; i < 3; i++)

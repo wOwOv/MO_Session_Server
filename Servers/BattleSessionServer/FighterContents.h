@@ -35,7 +35,7 @@ public:
 	virtual void OnUpdate() override;
 	virtual void OnShutDown() override;
 
-	void Init(__int64 matchID);
+	void Init(__int32 contentsNum, __int64 matchID, const Group& group);
 	void Clear();
 	bool CheckGameEnd();
 

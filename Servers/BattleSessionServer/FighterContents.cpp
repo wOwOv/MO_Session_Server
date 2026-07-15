@@ -196,36 +196,41 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 			server->_ctrlCv.notify_one();
 			return;
 		}
-		int redcnt = 0;
-		int bluecnt = 0;
-		std::unordered_map<SessionID, Player*>::iterator cit = _playerMap.begin();
-		int id = 0;
-		for( ; cit != _playerMap.end(); cit++)
+
+
+		for (int i = 0; i < 3; ++i)
 		{
-			Player* tgt = cit->second;
-			tgt->_id = id++;
-			tgt->_hp = 100;
-			tgt->_move = -1;
-			if (tgt->_team == Team::RED)		//red
+			auto rit = _playerMap.find(_red[i]);
+			if (rit != _playerMap.end())
 			{
-				_red[redcnt] = tgt->_sessionID;
+				Player* tgt = rit->second;
+				tgt->_id = i;
+				tgt->_hp = 100;
+				tgt->_move = -1;
 				tgt->_x = REDX;
-				tgt->_y = dfRANGE_MOVE_TOP+40 + TEAMY * redcnt;
+				tgt->_y = dfRANGE_MOVE_TOP + 40 + TEAMY * i;
 				tgt->_direction = dfPACKET_MOVE_DIR_RR;
-				redcnt++;
+
+				__int64 sessionA[1] = { tgt->_sessionID };
+				((FightProxy*)_proxy)->ProxySCCreateMe(sessionA, 1, tgt->_id, tgt->_direction, tgt->_x, tgt->_y, tgt->_hp);
 			}
-			else	//blue
+
+			auto bit = _playerMap.find(_blue[i]);
+			if (bit != _playerMap.end())
 			{
-				_blue[bluecnt] = tgt->_sessionID;
+				Player* tgt = bit->second;
+				tgt->_id = i+3;
+				tgt->_hp = 100;
+				tgt->_move = -1;
 				tgt->_x = BLUEX;
-				tgt->_y = dfRANGE_MOVE_TOP+40 + TEAMY * bluecnt;
+				tgt->_y = dfRANGE_MOVE_TOP + 40 + TEAMY * i;
 				tgt->_direction = dfPACKET_MOVE_DIR_LL;
-				bluecnt++;
+
+				__int64 sessionA[1] = { tgt->_sessionID };
+				((FightProxy*)_proxy)->ProxySCCreateMe(sessionA, 1, tgt->_id, tgt->_direction, tgt->_x, tgt->_y, tgt->_hp);
 			}
-			__int64 sessionA[1] = { tgt->_sessionID };
-			int count = 1;
-			((FightProxy*)_proxy)->ProxySCCreateMe(sessionA, 1, tgt->_id, tgt->_direction, tgt->_x, tgt->_y, tgt->_hp);
 		}
+
 		std::unordered_map<SessionID, Player*>::iterator oit = _playerMap.begin();
 		for (; oit != _playerMap.end(); oit++)
 		{
@@ -427,9 +432,16 @@ void FightContents::OnUpdate()
 void FightContents::OnShutDown()
 {}
 
-void FightContents::Init(__int64 matchID)
+void FightContents::Init(__int32 contentsNum, __int64 matchID, const Group& group)
 {
+	SetContentsNum(contentsNum);
 	_matchID = matchID;
+
+	for (int i = 0; i < 3; ++i)
+	{
+		_red[i] = group._red[i];
+		_blue[i] = group._blue[i];
+	}
 }
 
 void FightContents::Clear()
@@ -440,8 +452,13 @@ void FightContents::Clear()
 	_redCount = 0;
 	_blueCount = 0;
 	_oldTick=0;
-
 	_end = 1;
+	for (int i = 0; i < 3; ++i)
+	{
+		_red[i] = 0;
+		_blue[i] = 0;
+	}
+	_winLoss = 0;
 }
 bool FightContents::CheckGameEnd()
 {
