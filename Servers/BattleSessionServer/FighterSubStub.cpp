@@ -10,237 +10,212 @@ void StubForMatch::ProcMatchDefault(__int64 sessionID, CPacket packet)
 
 void StubForFight::ProcCSMoveStart(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
-	Player* player = nullptr;
-	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
+	Player* player = FindPlayer(sessionID);
+	if (player == nullptr)
 	{
-		player = it->second;
-	}
-	else
-	{ 
 		return;
 	}
-	if (abs(player->_x - x) > dfERROR_RANGE || abs(player->_y - y) > dfERROR_RANGE)
+
+	if (!IsPositionSyncValid(*player, x, y))
 	{
 		_server->Disconnect(sessionID);
+		return;
 	}
-	else
+	//player 움직임 정보 변경
+	switch (dir)
 	{
-		//player 움직임 정보 변경
-		switch (dir)
-		{
-		case dfPACKET_MOVE_DIR_LL:
-		case dfPACKET_MOVE_DIR_LU:
-		case dfPACKET_MOVE_DIR_LD:
-			player->_direction = dfPACKET_MOVE_DIR_LL;
-			break;
-		case dfPACKET_MOVE_DIR_RR:
-		case dfPACKET_MOVE_DIR_RU:
-		case dfPACKET_MOVE_DIR_RD:
-			player->_direction = dfPACKET_MOVE_DIR_RR;
-			break;
-		}
-		player->_move = dir;
-		player->_x = x;
-		player->_y = y;
-
-		//해당 플레이어에 대한 움직임 정보 본인 제외 전체에게 send
-		__int64 sessionA[6];
-		int count = 0;
-		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-		{
-			if (cit->first != sessionID)
-			{
-				sessionA[count] = cit->first;
-				count++;
-			}
-		}
-		static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCMoveStart(sessionA, count, player->_id,dir, x, y);
-
+	case dfPACKET_MOVE_DIR_LL:
+	case dfPACKET_MOVE_DIR_LU:
+	case dfPACKET_MOVE_DIR_LD:
+		player->_direction = dfPACKET_MOVE_DIR_LL;
+		break;
+	case dfPACKET_MOVE_DIR_RR:
+	case dfPACKET_MOVE_DIR_RU:
+	case dfPACKET_MOVE_DIR_RD:
+		player->_direction = dfPACKET_MOVE_DIR_RR;
+		break;
 	}
+	player->_move = dir;
+	player->_x = x;
+	player->_y = y;
+
+	//해당 플레이어에 대한 움직임 정보 본인 제외 전체에게 send
+	__int64 sessionA[6];
+	int count = 0;
+	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
+	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
+	{
+		if (cit->first != sessionID)
+		{
+			sessionA[count] = cit->first;
+			count++;
+		}
+	}
+	static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCMoveStart(sessionA, count, player->_id, dir, x, y);
+
 }
 
 void StubForFight::ProcCSMoveStop(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
-	Player* player = nullptr;
-	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
-	{
-		player = it->second;
-	}
-	else
+	Player* player = FindPlayer(sessionID);
+	if (player == nullptr)
 	{
 		return;
 	}
-	if (abs(player->_x - x) > dfERROR_RANGE || abs(player->_y - y) > dfERROR_RANGE)
+
+	if (!IsPositionSyncValid(*player, x, y))
 	{
 		_server->Disconnect(sessionID);
+		return;
 	}
-	else
+	//player 움직임 정보 변경
+	switch (dir)
 	{
-		//player 움직임 정보 변경
-		switch (dir)
-		{
-		case dfPACKET_MOVE_DIR_LL:
-		case dfPACKET_MOVE_DIR_LU:
-		case dfPACKET_MOVE_DIR_LD:
-			player->_direction = dfPACKET_MOVE_DIR_LL;
-			break;
-		case dfPACKET_MOVE_DIR_RR:
-		case dfPACKET_MOVE_DIR_RU:
-		case dfPACKET_MOVE_DIR_RD:
-			player->_direction = dfPACKET_MOVE_DIR_RR;
-			break;
-		}
-		player->_move = -1;
-		player->_x = x;
-		player->_y = y;
-
-
-		//해당 플레이어에 대한 움직임 정보 본인 제외 전체에게 send
-		__int64 sessionA[6];
-		int count = 0;
-		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-		{
-			if (cit->first != sessionID)
-			{
-				sessionA[count] = cit->first;
-				count++;
-			}
-		}
-		(static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy))->ProxySCMoveStop(sessionA, count, player->_id,dir, x, y);
-
+	case dfPACKET_MOVE_DIR_LL:
+	case dfPACKET_MOVE_DIR_LU:
+	case dfPACKET_MOVE_DIR_LD:
+		player->_direction = dfPACKET_MOVE_DIR_LL;
+		break;
+	case dfPACKET_MOVE_DIR_RR:
+	case dfPACKET_MOVE_DIR_RU:
+	case dfPACKET_MOVE_DIR_RD:
+		player->_direction = dfPACKET_MOVE_DIR_RR;
+		break;
 	}
+	player->_move = -1;
+	player->_x = x;
+	player->_y = y;
+
+
+	//해당 플레이어에 대한 움직임 정보 본인 제외 전체에게 send
+	__int64 sessionA[6];
+	int count = 0;
+	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
+	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
+	{
+		if (cit->first != sessionID)
+		{
+			sessionA[count] = cit->first;
+			count++;
+		}
+	}
+	(static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy))->ProxySCMoveStop(sessionA, count, player->_id, dir, x, y);
+
+
 }
 
 void StubForFight::ProcCSAttack1(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
-	Player* player = nullptr;
-	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
-	{
-		player = it->second;
-	}
-	else
+	Player* player = FindPlayer(sessionID);
+	if (player == nullptr)
 	{
 		return;
 	}
-	if (abs(player->_x - x) > dfERROR_RANGE || abs(player->_y - y) > dfERROR_RANGE)
+
+	if (!IsPositionSyncValid(*player, x, y))
 	{
 		_server->Disconnect(sessionID);
+		return;
 	}
-	else
+
+	//해당 플레이어 공격 정보 처리
+	player->_direction = dir;
+	player->_x = x;
+	player->_y = y;
+
+	//해당 플레이어 공격 정보 send()
+	__int64 sessionA[6];
+	int count = 0;
+	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
+	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 	{
-		//해당 플레이어 공격 정보 처리
-		player->_direction = dir;
-		player->_x = x;
-		player->_y = y;
-
-		//해당 플레이어 공격 정보 send()
-		__int64 sessionA[6];
-		int count = 0;
-		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
+		if (cit->first != sessionID)
 		{
-			if (cit->first != sessionID)
-			{
-				sessionA[count] = cit->first;
-				count++;
-			}
+			sessionA[count] = cit->first;
+			count++;
 		}
-		static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack1(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
-
-		//데미지처리
-		AttackPlayer(*player, CSATTACK1);
 	}
+	static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack1(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
+
+	//데미지처리
+	AttackPlayer(*player, CSATTACK1);
+
 }
 
 void StubForFight::ProcCSAttack2(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
-	Player* player = nullptr;
-	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
-	{
-		player = it->second;
-	}
-	else
+	Player* player = FindPlayer(sessionID);
+	if (player == nullptr)
 	{
 		return;
 	}
-	if (abs(player->_x - x) > dfERROR_RANGE || abs(player->_y - y) > dfERROR_RANGE)
+
+	if (!IsPositionSyncValid(*player, x, y))
 	{
 		_server->Disconnect(sessionID);
+		return;
 	}
-	else
+	//해당 플레이어 공격 정보 처리
+	player->_direction = dir;
+	player->_x = x;
+	player->_y = y;
+
+	//해당 플레이어 공격 정보 send()
+	__int64 sessionA[6];
+	int count = 0;
+	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
+	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 	{
-		//해당 플레이어 공격 정보 처리
-		player->_direction = dir;
-		player->_x = x;
-		player->_y = y;
-
-		//해당 플레이어 공격 정보 send()
-		__int64 sessionA[6];
-		int count = 0;
-		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
+		if (cit->first != sessionID)
 		{
-			if (cit->first != sessionID)
-			{
-				sessionA[count] = cit->first;
-				count++;
-			}
+			sessionA[count] = cit->first;
+			count++;
 		}
-		static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack2(sessionA, count, player->_id,player->_direction, player->_x, player->_y);
-
-		//데미지처리
-		AttackPlayer(*player, CSATTACK2);
-
 	}
+	static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack2(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
+
+	//데미지처리
+	AttackPlayer(*player, CSATTACK2);
+
+
 }
 
 void StubForFight::ProcCSAttack3(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
-	Player* player = nullptr;
-	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.find(sessionID);
-	if (it != static_cast<FightContents*>(_contents)->_playerMap.end())
-	{
-		player = it->second;
-	}
-	else
+	Player* player = FindPlayer(sessionID);
+	if (player == nullptr)
 	{
 		return;
 	}
-	if (abs(player->_x - x) > dfERROR_RANGE || abs(player->_y - y) > dfERROR_RANGE)
+
+	if (!IsPositionSyncValid(*player, x, y))
 	{
 		_server->Disconnect(sessionID);
+		return;
 	}
-	else
+	//해당 플레이어 공격 정보 처리
+	player->_direction = dir;
+	player->_x = x;
+	player->_y = y;
+
+	//해당 플레이어 공격 정보 send()
+	__int64 sessionA[6];
+	int count = 0;
+	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
+	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
 	{
-		//해당 플레이어 공격 정보 처리
-		player->_direction = dir;
-		player->_x = x;
-		player->_y = y;
-
-		//해당 플레이어 공격 정보 send()
-		__int64 sessionA[6];
-		int count = 0;
-		std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-		for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
+		if (cit->first != sessionID)
 		{
-			if (cit->first != sessionID)
-			{
-				sessionA[count] = cit->first;
-				count++;
-			}
+			sessionA[count] = cit->first;
+			count++;
 		}
-		static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack3(sessionA, count, player->_id,player->_direction, player->_x, player->_y);
-
-		//데미지처리
-		AttackPlayer(*player, CSATTACK3);
-
 	}
+	static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack3(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
+
+	//데미지처리
+	AttackPlayer(*player, CSATTACK3);
+
+
 }
 
 void StubForFight::ProcFightDefault(__int64 sessionID, CPacket packet)
@@ -446,3 +421,21 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 
 	}
 }
+
+Player* StubForFight::FindPlayer(__int64 sessionID)
+{
+	FightContents* contents = static_cast<FightContents*>(_contents);
+	auto it = contents->_playerMap.find(sessionID);
+	if (it == contents->_playerMap.end())
+	{
+		return nullptr;
+	}
+
+	return it->second;
+}
+
+bool StubForFight::IsPositionSyncValid(const Player& player, unsigned short x, unsigned short y) const
+{
+	return abs(player._x - x) <= dfERROR_RANGE && abs(player._y - y) <= dfERROR_RANGE;
+}
+

@@ -23,6 +23,8 @@ public:
 
 private:
 	void AttackPlayer(const Player& player, unsigned char type);
+	Player* FindPlayer(__int64 sessionID);
+	bool IsPositionSyncValid(const Player& player, unsigned short x, unsigned short y) const;
 
 private:
 };
