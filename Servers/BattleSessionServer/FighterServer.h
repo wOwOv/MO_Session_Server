@@ -74,6 +74,13 @@ private:
 	static unsigned __stdcall DBThread(LPVOID arg);
 
 private:
+	void HandleFightAlloc(Control& control, __int32& nextContentsNum);
+	void HandleFightFree(Control& control);	
+	void HandleMatchDeregister();
+	bool ShouldStopControlThread();
+	void AdvanceContentsNum(__int32& nextContentsNum) const;
+
+private:
 	void PushDBRequest(DBRequest request);
 	bool WaitAndPopDBRequest(DBRequest& outrequest);
 

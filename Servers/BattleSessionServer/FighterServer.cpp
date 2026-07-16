@@ -253,9 +253,9 @@ std::shared_mutex& FighterServer::GetPlayerLock()
 
 unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 CtrlThread가 생성하고 삭제함
 {
-	__int32 cnum = 1;//1~1000000000까지 부여가능
+	__int32 cnum = 1;
+	FighterServer* server = static_cast<FighterServer*>(arg);
 
-	FighterServer* server = (FighterServer*)arg;
 	while (1)
 	{
 		std::unique_lock<std::mutex> lock(server->_ctrlMtx);
@@ -265,9 +265,10 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 Ctrl
 		{
 			Control* control;
 			bool check = server->_ctrlQ.Dequeue(&control);
+
 			if (check == false)
 			{
-				if (server->_fightPool.GetUseCount()==0&&server->_ctrlThreadRun.load() == false&&server->_state.load()==MATCH_DEREGISTERED)
+				if (server->ShouldStopControlThread())
 				{
 					server->_state.store(CONTROL_STOPPED);
 					LOG(L"FighterServer", LVSYSTEM, L"Control Thread Stopped");
@@ -275,51 +276,25 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents는 Ctrl
 				}
 				break;
 			}
+
 			switch (control->_type)
 			{
 			case CONTROLTYPE::FIGHTALLOC:
-			{
-				FightContents* contents = server->_fightPool.Alloc();
-				contents->Clear();
-				contents->Init(cnum,server->CreateMatchID(),control->_group);
-
-				server->RegisterContents(cnum, contents);
-				for (int i = 0; i < 3; i++)
-				{
-					server->InsertToContents(control->_group._red[i], cnum);
-				}
-				for (int i = 0; i < 3; i++)
-				{
-					server->InsertToContents(control->_group._blue[i], cnum);
-				}
-
-				++cnum;
-				cnum %= ROOM;
-				if (cnum == 0)
-				{
-					++cnum;
-				}
+				server->HandleFightAlloc(*control, cnum);
 				break;
-			}
+
 			case CONTROLTYPE::FIGHTFREE:
-			{
-				FightContents* fight = (FightContents*)control->_contents;
-				server->DeregisterContents(fight->GetContentsNum());
-				server->_fightPool.Free(fight);
+				server->HandleFightFree(*control);
 				break;
-			}
+
 			case CONTROLTYPE::MATCHDEREGISTER:
-			{
-				server->DeregisterContents(MATCH);
-				server->_state.store(MATCH_DEREGISTERED);
-				LOG(L"FighterServer", LVSYSTEM, L"Match Contents Deregistered");
+				server->HandleMatchDeregister();
 				break;
-			}
+
 			default:
-			{
 				break;
 			}
-			}
+
 			server->_controlPool.Free(control);
 		}
 	}
@@ -368,6 +343,59 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 		}
 	}
 	return 1;
+}
+
+void FighterServer::HandleFightAlloc(Control& control, __int32& nextContentsNum)
+{
+	FightContents* contents = _fightPool.Alloc();
+	contents->Clear();
+	contents->Init(nextContentsNum, CreateMatchID(), control._group);
+
+	RegisterContents(nextContentsNum, contents);
+
+	for (int i = 0; i < 3; ++i)
+	{
+		InsertToContents(control._group._red[i], nextContentsNum);
+	}
+
+	for (int i = 0; i < 3; ++i)
+	{
+		InsertToContents(control._group._blue[i], nextContentsNum);
+	}
+
+	AdvanceContentsNum(nextContentsNum);
+}
+
+void FighterServer::HandleFightFree(Control& control)
+{
+	FightContents* fight = static_cast<FightContents*>(control._contents);
+	DeregisterContents(fight->GetContentsNum());
+	_fightPool.Free(fight);
+}
+
+void FighterServer::HandleMatchDeregister()
+{
+	DeregisterContents(MATCH);
+	_state.store(MATCH_DEREGISTERED);
+	LOG(L"FighterServer", LVSYSTEM, L"Match Contents Deregistered");
+}
+
+bool FighterServer::ShouldStopControlThread()
+{
+	return _fightPool.GetUseCount() == 0
+		&& _ctrlThreadRun.load() == false
+		&& _state.load() == MATCH_DEREGISTERED;
+}
+
+void FighterServer::AdvanceContentsNum(__int32& nextContentsNum) const
+{
+	++nextContentsNum;
+	nextContentsNum %= ROOM;
+
+	if (nextContentsNum == 0)
+	{
+		++nextContentsNum;
+	}
 }
 
 void FighterServer::PushDBRequest(DBRequest request)
