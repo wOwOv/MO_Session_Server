@@ -338,7 +338,7 @@ void ContentsServer::DeleteFromContents(__int64 sessionID, __int32 contentsnum)
 }
 
 
-bool ContentsServer::SetContentsNum(__int64 sessionID, __int32 contentsnum)
+bool ContentsServer::TryMoveSessionToContents(__int64 sessionID, __int32 contentsnum)
 {
 	int index = FindSession(sessionID);
 

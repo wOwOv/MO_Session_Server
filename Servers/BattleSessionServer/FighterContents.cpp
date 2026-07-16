@@ -113,7 +113,7 @@ void MatchContents::AssignTeamAndMovePlayers(SessionID(&teamSlots)[3], Team team
 
 		player->_team = team;
 		teamSlots[i] = player->_sessionID;
-		_mServer->SetContentsNum(player->_sessionID, CONMOV);
+		_mServer->TryMoveSessionToContents(player->_sessionID, CONMOV);
 
 		_playerMap.erase(it);
 	}
@@ -146,7 +146,7 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 	if (it != server->_playerMap.end())
 	{
 		player = it->second;
-		bool moved=_mServer->SetContentsNum(player->_sessionID, GetContentsNum());
+		bool moved=_mServer->TryMoveSessionToContents(player->_sessionID, GetContentsNum());
 		if (moved)
 		{
 			player->_contents = GetContentsNum();
