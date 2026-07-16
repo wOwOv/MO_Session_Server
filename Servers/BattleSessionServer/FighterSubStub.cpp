@@ -174,152 +174,25 @@ void StubForFight::ProcFightDefault(__int64 sessionID, CPacket packet)
 
 void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 {
-	Player* tgt = nullptr;
-	std::unordered_map<SessionID, Player*>::iterator it = ((FightContents*)_contents)->_playerMap.begin();
-	for (; it != static_cast<FightContents*>(_contents)->_playerMap.end(); it++)
-	{
-		tgt = it->second;
+	auto* contents = static_cast<FightContents*>(_contents);
 
-		if (player._team == tgt->_team)
+	for (auto it = contents->_playerMap.begin(); it != contents->_playerMap.end(); ++it)
+	{
+		Player* target = it->second;
+
+		if (player._team == target->_team)
 		{
 			continue;
 		}
 
-
-		switch (type)
+		if (!IsTargetInAttackRange(player, *target, type))
 		{
-		case CSATTACK1:
-		{
-			if (player._direction == dfPACKET_MOVE_DIR_LL)
-			{
-				if (tgt->_x <= player._x)
-				{
-					if ((player._x - tgt->_x) < dfATTACK1_RANGE_X && abs(player._y - tgt->_y) < dfATTACK1_RANGE_Y)
-					{
-						//hp처리 후 메시지 만들어 전체 send
-						tgt->_hp -= ATTACK1DMG;
-						if (tgt->_hp <= 0)
-						{
-							_server->Disconnect(tgt->_sessionID);
-						}
-						BroadcastDamage(player, *tgt);
-						break;
-					}
-				}
-			}
-			else if (player._direction == dfPACKET_MOVE_DIR_RR)
-			{
-
-				if (tgt->_x >= player._x)
-				{
-					if ((tgt->_x - player._x) < dfATTACK1_RANGE_X && abs(tgt->_y - player._y) < dfATTACK1_RANGE_Y)
-					{
-						//_hp처리 후 메시지 만들어 전체 send
-						tgt->_hp -= ATTACK1DMG;
-
-						if (tgt->_hp <= 0)
-						{
-							_server->Disconnect(tgt->_sessionID);
-						}
-						BroadcastDamage(player, *tgt);
-						break;
-					}
-				}
-			}
-			break;
-		}
-		case CSATTACK2:
-		{
-			if (player._direction == dfPACKET_MOVE_DIR_LL)
-			{
-
-				if (tgt->_x <= player._x)
-				{
-					if ((player._x - tgt->_x) < dfATTACK2_RANGE_X && abs(player._y - tgt->_y) < dfATTACK2_RANGE_Y)
-					{
-						//_hp처리 후 메시지 만들어 전체 send
-						tgt->_hp -= ATTACK2DMG;
-
-						if (tgt->_hp <= 0)
-						{
-							_server->Disconnect(tgt->_sessionID);
-						}
-
-						BroadcastDamage(player, *tgt);
-						break;
-					}
-				}
-
-			}
-			else if (player._direction == dfPACKET_MOVE_DIR_RR)
-			{
-
-				if (tgt->_x >= player._x)
-				{
-					if ((tgt->_x - player._x) < dfATTACK2_RANGE_X && abs(tgt->_y - player._y) < dfATTACK2_RANGE_Y)
-					{
-						//_hp처리 후 메시지 만들어 전체 send
-						tgt->_hp -= ATTACK2DMG;
-
-						if (tgt->_hp <= 0)
-						{
-							_server->Disconnect(tgt->_sessionID);
-						}
-
-						BroadcastDamage(player, *tgt);
-						break;
-					}
-				}
-			}
-			break;
-		}
-		case CSATTACK3:
-		{
-			if (player._direction == dfPACKET_MOVE_DIR_LL)
-			{
-				if (tgt->_x <= player._x)
-				{
-					if ((player._x - tgt->_x) < dfATTACK3_RANGE_X && abs(player._y - tgt->_y) < dfATTACK3_RANGE_Y)
-					{
-						//_hp처리 후 메시지 만들어 전체 send
-						tgt->_hp -= ATTACK3DMG;
-
-						if (tgt->_hp <= 0)
-						{
-							_server->Disconnect(tgt->_sessionID);
-						}
-
-						BroadcastDamage(player, *tgt);
-						break;
-					}
-				}
-			}
-			else if (player._direction == dfPACKET_MOVE_DIR_RR)
-			{
-
-				if (tgt->_x >= player._x)
-				{
-					if ((tgt->_x - player._x) < dfATTACK3_RANGE_X && abs(tgt->_y - player._y) < dfATTACK3_RANGE_Y)
-					{
-						//_hp처리 후 메시지 만들어 전체 send
-						tgt->_hp -= ATTACK3DMG;
-
-						if (tgt->_hp <= 0)
-						{
-							_server->Disconnect(tgt->_sessionID);
-						}
-
-						BroadcastDamage(player, *tgt);
-						break;
-					}
-				}
-
-			}
-			break;
-		}
+			continue;
 		}
 
-
+		ApplyDamage(*target, GetAttackDamage(type));
+		BroadcastDamage(player, *target);
+		return;
 	}
 }
 
@@ -383,4 +256,72 @@ void StubForFight::UpdateActionState(Player& player, unsigned char dir, unsigned
 	player._direction = dir;
 	player._x = x;
 	player._y = y;
+}
+
+int StubForFight::GetAttackDamage(unsigned char attackType) const
+{
+	switch (attackType)
+	{
+	case CSATTACK1: return ATTACK1DMG;
+	case CSATTACK2: return ATTACK2DMG;
+	case CSATTACK3: return ATTACK3DMG;
+	default: return 0;
+	}
+}
+
+bool StubForFight::IsTargetInAttackRange(const Player& attacker, const Player& target, unsigned char attackType) const
+{
+	int rangeX = 0;
+	int rangeY = 0;
+
+	switch (attackType)
+	{
+	case CSATTACK1:
+		rangeX = dfATTACK1_RANGE_X;
+		rangeY = dfATTACK1_RANGE_Y;
+		break;
+	case CSATTACK2:
+		rangeX = dfATTACK2_RANGE_X;
+		rangeY = dfATTACK2_RANGE_Y;
+		break;
+	case CSATTACK3:
+		rangeX = dfATTACK3_RANGE_X;
+		rangeY = dfATTACK3_RANGE_Y;
+		break;
+	default:
+		return false;
+	}
+
+	if (attacker._direction == dfPACKET_MOVE_DIR_LL)
+	{
+		if (target._x > attacker._x)
+		{
+			return false;
+		}
+
+		return (attacker._x - target._x) < rangeX
+			&& abs(attacker._y - target._y) < rangeY;
+	}
+
+	if (attacker._direction == dfPACKET_MOVE_DIR_RR)
+	{
+		if (target._x < attacker._x)
+		{
+			return false;
+		}
+
+		return (target._x - attacker._x) < rangeX
+			&& abs(target._y - attacker._y) < rangeY;
+	}
+
+	return false;
+}
+
+void StubForFight::ApplyDamage(Player& target, int damage) const
+{
+	target._hp -= damage;
+	if (target._hp <= 0)
+	{
+		_server->Disconnect(target._sessionID);
+	}
 }

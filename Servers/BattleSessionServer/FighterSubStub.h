@@ -30,5 +30,9 @@ private:
 	void BroadcastDamage(const Player& attacker, const Player& target) const;
 	void UpdateActionState(Player& player, unsigned char dir, unsigned short x, unsigned short y) const;
 
+	int GetAttackDamage(unsigned char attackType) const;
+	bool IsTargetInAttackRange(const Player& attacker, const Player& target, unsigned char attackType) const;
+	void ApplyDamage(Player& target, int damage) const;
+
 private:
 };
