@@ -1,4 +1,4 @@
-#ifndef __MAXLOCKFREEQUEUECAS__
+﻿#ifndef __MAXLOCKFREEQUEUECAS__
 #define __MAXLOCKFREEQUEUECAS__
 
 #include "TlsMemoryPool.h"

@@ -1,4 +1,4 @@
-#ifndef __LOCKFREEQUEUE__
+﻿#ifndef __LOCKFREEQUEUE__
 #define __LOCKFREEQUEUE__
 
 #include "TlsMemoryPool.h"

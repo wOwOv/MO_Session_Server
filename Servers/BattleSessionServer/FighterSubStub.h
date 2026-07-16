@@ -23,6 +23,16 @@ public:
 
 private:
 	void AttackPlayer(const Player& player, unsigned char type);
+	Player* FindPlayer(__int64 sessionID);
+	bool IsPositionSyncValid(const Player& player, unsigned short x, unsigned short y) const;
+	int CollectOtherSessions(__int64 sessionID, __int64(&sessionA)[6]) const;
+	int CollectAllSessions(__int64(&sessionA)[6]) const;
+	void BroadcastDamage(const Player& attacker, const Player& target) const;
+	void UpdateActionState(Player& player, unsigned char dir, unsigned short x, unsigned short y) const;
+
+	int GetAttackDamage(unsigned char attackType) const;
+	bool IsTargetInAttackRange(const Player& attacker, const Player& target, unsigned char attackType) const;
+	void ApplyDamage(Player& target, int damage) const;
 
 private:
 };

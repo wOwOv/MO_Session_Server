@@ -129,7 +129,7 @@ public:
 	void SetDefaultContents(std::int32_t contentsnum);
 	void InsertToContents(std::int64_t sessionID, std::int32_t contentsnum);
 	void DeleteFromContents(std::int64_t sessionID, std::int32_t contentsnum);
-	bool SetContentsNum(std::int64_t sessionID, std::int32_t contentsnum);
+	bool TryMoveSessionToContents(std::int64_t sessionID, std::int32_t contentsnum);
 
 	void AttachStub(IStub* stub);
 	IStub* DetachStub();

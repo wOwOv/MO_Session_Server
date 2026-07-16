@@ -1,4 +1,4 @@
-#ifndef __LOCKFREESTACK__
+﻿#ifndef __LOCKFREESTACK__
 #define __LOCKFREESTACK__
 #include <windows.h>
 #include <new.h>

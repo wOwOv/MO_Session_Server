@@ -61,25 +61,10 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 		{
 			Control* control = server->_controlPool.Alloc();
 			control->_type = CONTROLTYPE::FIGHTALLOC;
-			std::unordered_map<SessionID, Player*>::iterator mit;
-			for (int i = 0; i < 3; i++)
-			{
-				mit = _playerMap.begin();
-				Player* player = mit->second;
-				player->_team = Team::RED;
-				control->_group._red[i] = player->_sessionID;
-				_mServer->SetContentsNum(player->_sessionID, CONMOV);
-				_playerMap.erase(mit);
-			}
-			for (int i = 0; i < 3; i++)
-			{
-				mit = _playerMap.begin();
-				Player* player = mit->second;
-				player->_team = Team::BLUE;
-				control->_group._blue[i] = player->_sessionID;
-				_mServer->SetContentsNum(player->_sessionID, CONMOV);
-				_playerMap.erase(mit);
-			}
+
+			AssignTeamAndMovePlayers(control->_group._red, Team::RED);
+			AssignTeamAndMovePlayers(control->_group._blue, Team::BLUE);
+
 			server->_ctrlQ.Enqueue(control);
 			server->_ctrlCv.notify_one();
 		}
@@ -119,6 +104,21 @@ bool MatchContents::CheckStopRequested()
 	return false;
 }
 
+void MatchContents::AssignTeamAndMovePlayers(SessionID(&teamSlots)[3], Team team)
+{
+	for (int i = 0; i < 3; ++i)
+	{
+		auto it = _playerMap.begin();
+		Player* player = it->second;
+
+		player->_team = team;
+		teamSlots[i] = player->_sessionID;
+		_mServer->TryMoveSessionToContents(player->_sessionID, CONMOV);
+
+		_playerMap.erase(it);
+	}
+}
+
 FightContents::FightContents():Contents(0,20)
 {
 	StubForFight* stub=new StubForFight;
@@ -146,7 +146,7 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 	if (it != server->_playerMap.end())
 	{
 		player = it->second;
-		bool moved=_mServer->SetContentsNum(player->_sessionID, GetContentsNum());
+		bool moved=_mServer->TryMoveSessionToContents(player->_sessionID, GetContentsNum());
 		if (moved)
 		{
 			player->_contents = GetContentsNum();
@@ -168,35 +168,9 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 	{
 		if (CheckGameEnd() && _end)
 		{
-			_end = 0;
-			std::unordered_map<SessionID, Player*>::iterator cit = _playerMap.begin();
-			for (; cit != _playerMap.end(); cit++)
-			{
-				Player* tgt = cit->second;
-				Disconnect(tgt->_sessionID);
-			}
-
-			BattleResult result;
-			result._matchID = _matchID;
-			for (int i = 0; i < 3; i++)
-			{
-				result._red[i] = _red[i];
-				result._blue[i] = _blue[i];
-			}
-			result._winnerTeam = _winLoss;
-
-			FighterServer* server = (FighterServer*)_mServer;
-			server->RequestSaveBattleResult(result);
-
-			Control* control = server->_controlPool.Alloc();
-			control->_type = CONTROLTYPE::FIGHTFREE;
-			control->_contents = this;
-
-			server->_ctrlQ.Enqueue(control);
-			server->_ctrlCv.notify_one();
+			FinishFightAndRelease();
 			return;
 		}
-
 
 		for (int i = 0; i < 3; ++i)
 		{
@@ -289,33 +263,8 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 
 	if (CheckGameEnd()&&_end)
 	{
-		_end = 0;
-		std::unordered_map<SessionID, Player*>::iterator cit = _playerMap.begin();
-		for(;cit!= _playerMap.end(); cit++)
-		{
-			Player* tgt = cit->second;
-			Disconnect(tgt->_sessionID);
-		}
-
-		BattleResult result;
-		result._matchID = _matchID;
-		for (int i = 0; i < 3; i++) 
-		{
-			result._red[i] = _red[i];
-			result._blue[i] = _blue[i];
-		}
-		result._winnerTeam = _winLoss;
-
-		FighterServer* server = (FighterServer*)_mServer;
-		server->RequestSaveBattleResult(result);
-
-		Control* control = server->_controlPool.Alloc();
-		control->_type = CONTROLTYPE::FIGHTFREE;
-		control->_contents = this;
-
-		server->_ctrlQ.Enqueue(control);
-		server->_ctrlCv.notify_one();
-		
+		FinishFightAndRelease();
+		return;
 	}
 }
 
@@ -326,105 +275,16 @@ void FightContents::OnUpdate()
 	DWORD remain = deltatime % 20;
 	_oldTick += (deltatime - remain);
 
-	//frameCount++;
 	//움직임 로직처리
-	std::unordered_map<SessionID,Player*>::iterator moveit = _playerMap.begin();
+	const int frameCount = static_cast<int>(frame);
+
+	std::unordered_map<SessionID, Player*>::iterator moveit = _playerMap.begin();
 	for (; moveit != _playerMap.end(); moveit++)
 	{
 		Player* player = moveit->second;
 		if (player->_move != -1)
 		{
-			switch (player->_move)
-			{
-			case  dfPACKET_MOVE_DIR_LL:
-			{
-				if (player->_x > dfRANGE_MOVE_LEFT + 3)
-				{
-					player->_x -= 3 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_LU:
-			{
-				//왼쪽에 닿거나 위에 닿았을때
-				if (player->_x <= dfRANGE_MOVE_LEFT + 3 || player->_y <= dfRANGE_MOVE_TOP)
-				{
-					//이동하면 안됨
-				}
-				else
-				{
-					player->_x -= 3 * frame;
-					player->_y -= 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_UU:
-			{
-				if (player->_y > dfRANGE_MOVE_TOP)
-				{
-					player->_y -= 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_RU:
-			{
-				//오른쪽에 닿거나 위에 닿았을때
-				if (player->_x >= dfRANGE_MOVE_RIGHT - 3 || player->_y <= dfRANGE_MOVE_TOP)
-				{
-					//이동하면 안됨
-				}
-				else
-				{
-					player->_x += 3 * frame;
-					player->_y -= 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_RR:
-			{
-				if (player->_x < dfRANGE_MOVE_RIGHT - 3)
-				{
-					player->_x += 3 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_RD:
-			{
-				//오른쪽에 닿거나 아래에 닿았을때
-				if (player->_x >= dfRANGE_MOVE_RIGHT - 3 || player->_y >= dfRANGE_MOVE_BOTTOM)
-				{
-					//이동하면 안됨
-				}
-				else
-				{
-					player->_x += 3 * frame;
-					player->_y += 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_DD:
-			{
-				if (player->_y < dfRANGE_MOVE_BOTTOM)
-				{
-					player->_y += 2 * frame;
-				}
-				break;
-			}
-			case dfPACKET_MOVE_DIR_LD:
-			{
-				//왼쪽에 닿거나 아래에 닿았을때
-				if (player->_x <= dfRANGE_MOVE_LEFT + 3 || player->_y >= dfRANGE_MOVE_BOTTOM)
-				{
-					//이동하면 안됨
-				}
-				else
-				{
-					player->_x -= 3 * frame;
-					player->_y += 2 * frame;
-				}
-				break;
-			}
-			}
+			ApplyMovement(*player, frameCount);
 		}
 	}
 }
@@ -473,4 +333,150 @@ bool FightContents::CheckGameEnd()
 		return true;
 	}
 	return false;
+}
+
+void FightContents::ApplyMovement(Player& player, int frame)
+{
+	if (frame <= 0)
+	{
+		return;
+	}
+
+	const int currentX = static_cast<int>(player._x);
+	const int currentY = static_cast<int>(player._y);
+
+	int newX = currentX;
+	int newY = currentY;
+
+	switch (player._move)
+	{
+	case dfPACKET_MOVE_DIR_LL:
+	{
+		const int maxFrameX = (currentX - dfRANGE_MOVE_LEFT) / 3;
+		const int moveFrame = (frame < maxFrameX) ? frame : maxFrameX;
+		newX = currentX - 3 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_UU:
+	{
+		const int maxFrameY = (currentY - dfRANGE_MOVE_TOP) / 2;
+		const int moveFrame = (frame < maxFrameY) ? frame : maxFrameY;
+		newY = currentY - 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_RR:
+	{
+		const int maxFrameX = (dfRANGE_MOVE_RIGHT - currentX) / 3;
+		const int moveFrame = (frame < maxFrameX) ? frame : maxFrameX;
+		newX = currentX + 3 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_DD:
+	{
+		const int maxFrameY = (dfRANGE_MOVE_BOTTOM - currentY) / 2;
+		const int moveFrame = (frame < maxFrameY) ? frame : maxFrameY;
+		newY = currentY + 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_LU:
+	{
+		const int maxFrameX = (currentX - dfRANGE_MOVE_LEFT) / 3;
+		const int maxFrameY = (currentY - dfRANGE_MOVE_TOP) / 2;
+		int moveFrame = maxFrameX < maxFrameY ? maxFrameX : maxFrameY;
+		moveFrame = frame < moveFrame ? frame : moveFrame;
+
+		newX = currentX - 3 * moveFrame;
+		newY = currentY - 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_RU:
+	{
+		const int maxFrameX = (dfRANGE_MOVE_RIGHT - currentX) / 3;
+		const int maxFrameY = (currentY - dfRANGE_MOVE_TOP) / 2;
+		int moveFrame = maxFrameX < maxFrameY ? maxFrameX : maxFrameY;
+		moveFrame = frame < moveFrame ? frame : moveFrame;
+
+		newX = currentX + 3 * moveFrame;
+		newY = currentY - 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_RD:
+	{
+		const int maxFrameX = (dfRANGE_MOVE_RIGHT - currentX) / 3;
+		const int maxFrameY = (dfRANGE_MOVE_BOTTOM - currentY) / 2;
+		int moveFrame = maxFrameX < maxFrameY ? maxFrameX : maxFrameY;
+		moveFrame = frame < moveFrame ? frame : moveFrame;
+
+		newX = currentX + 3 * moveFrame;
+		newY = currentY + 2 * moveFrame;
+		break;
+	}
+
+	case dfPACKET_MOVE_DIR_LD:
+	{
+		const int maxFrameX = (currentX - dfRANGE_MOVE_LEFT) / 3;
+		const int maxFrameY = (dfRANGE_MOVE_BOTTOM - currentY) / 2;
+		int moveFrame = maxFrameX < maxFrameY ? maxFrameX : maxFrameY;
+		moveFrame = frame < moveFrame ? frame : moveFrame;
+
+		newX = currentX - 3 * moveFrame;
+		newY = currentY + 2 * moveFrame;
+		break;
+	}
+
+	default:
+		return;
+	}
+
+	player._x = static_cast<std::uint16_t>(newX);
+	player._y = static_cast<std::uint16_t>(newY);
+}
+
+void FightContents::FinishFightAndRelease()
+{
+	_end = 0;
+	DisconnectRemainingPlayers();
+	BattleResult result = BuildBattleResult();
+	FighterServer* server = (FighterServer*)_mServer;
+	server->RequestSaveBattleResult(result);
+	EnqueueFightFree();
+}
+
+void FightContents::DisconnectRemainingPlayers()
+{
+	for (const auto& entry : _playerMap)
+	{
+		Disconnect(entry.second->_sessionID);
+	}
+}
+
+BattleResult FightContents::BuildBattleResult() const
+{
+	BattleResult result;
+	result._matchID = _matchID;
+	for (int i = 0; i < 3; i++)
+	{
+		result._red[i] = _red[i];
+		result._blue[i] = _blue[i];
+	}
+	result._winnerTeam = _winLoss;
+	return result;
+}
+
+void FightContents::EnqueueFightFree()
+{
+	FighterServer* server = (FighterServer*)_mServer;
+
+	Control* control = server->_controlPool.Alloc();
+	control->_type = CONTROLTYPE::FIGHTFREE;
+	control->_contents = this;
+
+	server->_ctrlQ.Enqueue(control);
+	server->_ctrlCv.notify_one();
 }
