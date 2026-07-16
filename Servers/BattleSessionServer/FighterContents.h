@@ -17,6 +17,7 @@ public:
 private:
 	void DisconnectAllPlayer();
 	bool CheckStopRequested();
+	void AssignTeamAndMovePlayers(SessionID(&teamSlots)[3], Team team);
 
 private:
 	std::atomic<bool> _stopRequested = false;

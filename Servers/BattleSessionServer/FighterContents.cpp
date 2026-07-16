@@ -61,25 +61,10 @@ void MatchContents::OnEnter(__int64 sessionID, void* extra)
 		{
 			Control* control = server->_controlPool.Alloc();
 			control->_type = CONTROLTYPE::FIGHTALLOC;
-			std::unordered_map<SessionID, Player*>::iterator mit;
-			for (int i = 0; i < 3; i++)
-			{
-				mit = _playerMap.begin();
-				Player* player = mit->second;
-				player->_team = Team::RED;
-				control->_group._red[i] = player->_sessionID;
-				_mServer->SetContentsNum(player->_sessionID, CONMOV);
-				_playerMap.erase(mit);
-			}
-			for (int i = 0; i < 3; i++)
-			{
-				mit = _playerMap.begin();
-				Player* player = mit->second;
-				player->_team = Team::BLUE;
-				control->_group._blue[i] = player->_sessionID;
-				_mServer->SetContentsNum(player->_sessionID, CONMOV);
-				_playerMap.erase(mit);
-			}
+
+			AssignTeamAndMovePlayers(control->_group._red, Team::RED);
+			AssignTeamAndMovePlayers(control->_group._blue, Team::BLUE);
+
 			server->_ctrlQ.Enqueue(control);
 			server->_ctrlCv.notify_one();
 		}
@@ -117,6 +102,21 @@ bool MatchContents::CheckStopRequested()
 		return true;
 	}
 	return false;
+}
+
+void MatchContents::AssignTeamAndMovePlayers(SessionID(&teamSlots)[3], Team team)
+{
+	for (int i = 0; i < 3; ++i)
+	{
+		auto it = _playerMap.begin();
+		Player* player = it->second;
+
+		player->_team = team;
+		teamSlots[i] = player->_sessionID;
+		_mServer->SetContentsNum(player->_sessionID, CONMOV);
+
+		_playerMap.erase(it);
+	}
 }
 
 FightContents::FightContents():Contents(0,20)
