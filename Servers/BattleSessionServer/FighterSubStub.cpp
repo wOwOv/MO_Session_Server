@@ -41,16 +41,7 @@ void StubForFight::ProcCSMoveStart(__int64 sessionID, unsigned char dir, unsigne
 
 	//해당 플레이어에 대한 움직임 정보 본인 제외 전체에게 send
 	__int64 sessionA[6];
-	int count = 0;
-	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-	{
-		if (cit->first != sessionID)
-		{
-			sessionA[count] = cit->first;
-			count++;
-		}
-	}
+	int count = CollectOtherSessions(sessionID, sessionA);
 	static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCMoveStart(sessionA, count, player->_id, dir, x, y);
 
 }
@@ -89,16 +80,7 @@ void StubForFight::ProcCSMoveStop(__int64 sessionID, unsigned char dir, unsigned
 
 	//해당 플레이어에 대한 움직임 정보 본인 제외 전체에게 send
 	__int64 sessionA[6];
-	int count = 0;
-	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-	{
-		if (cit->first != sessionID)
-		{
-			sessionA[count] = cit->first;
-			count++;
-		}
-	}
+	int count = CollectOtherSessions(sessionID, sessionA);
 	(static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy))->ProxySCMoveStop(sessionA, count, player->_id, dir, x, y);
 
 
@@ -119,22 +101,11 @@ void StubForFight::ProcCSAttack1(__int64 sessionID, unsigned char dir, unsigned 
 	}
 
 	//해당 플레이어 공격 정보 처리
-	player->_direction = dir;
-	player->_x = x;
-	player->_y = y;
+	UpdateActionState(*player, dir, x, y);
 
 	//해당 플레이어 공격 정보 send()
 	__int64 sessionA[6];
-	int count = 0;
-	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-	{
-		if (cit->first != sessionID)
-		{
-			sessionA[count] = cit->first;
-			count++;
-		}
-	}
+	int count = CollectOtherSessions(sessionID, sessionA);
 	static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack1(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
 
 	//데미지처리
@@ -156,22 +127,11 @@ void StubForFight::ProcCSAttack2(__int64 sessionID, unsigned char dir, unsigned 
 		return;
 	}
 	//해당 플레이어 공격 정보 처리
-	player->_direction = dir;
-	player->_x = x;
-	player->_y = y;
+	UpdateActionState(*player, dir, x, y);
 
 	//해당 플레이어 공격 정보 send()
 	__int64 sessionA[6];
-	int count = 0;
-	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-	{
-		if (cit->first != sessionID)
-		{
-			sessionA[count] = cit->first;
-			count++;
-		}
-	}
+	int count = CollectOtherSessions(sessionID, sessionA);
 	static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack2(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
 
 	//데미지처리
@@ -194,22 +154,11 @@ void StubForFight::ProcCSAttack3(__int64 sessionID, unsigned char dir, unsigned 
 		return;
 	}
 	//해당 플레이어 공격 정보 처리
-	player->_direction = dir;
-	player->_x = x;
-	player->_y = y;
+	UpdateActionState(*player, dir, x, y);
 
 	//해당 플레이어 공격 정보 send()
 	__int64 sessionA[6];
-	int count = 0;
-	std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-	for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-	{
-		if (cit->first != sessionID)
-		{
-			sessionA[count] = cit->first;
-			count++;
-		}
-	}
+	int count = CollectOtherSessions(sessionID, sessionA);
 	static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCAttack3(sessionA, count, player->_id, player->_direction, player->_x, player->_y);
 
 	//데미지처리
@@ -253,15 +202,7 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 						{
 							_server->Disconnect(tgt->_sessionID);
 						}
-						__int64 sessionA[6];
-						int count = 0;
-						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-						{
-							sessionA[count] = cit->first;
-							count++;
-						}
-						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						BroadcastDamage(player, *tgt);
 						break;
 					}
 				}
@@ -280,15 +221,7 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 						{
 							_server->Disconnect(tgt->_sessionID);
 						}
-						__int64 sessionA[6];
-						int count = 0;
-						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-						{
-							sessionA[count] = cit->first;
-							count++;
-						}
-						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						BroadcastDamage(player, *tgt);
 						break;
 					}
 				}
@@ -312,15 +245,7 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 							_server->Disconnect(tgt->_sessionID);
 						}
 
-						__int64 sessionA[6];
-						int count = 0;
-						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-						{
-							sessionA[count] = cit->first;
-							count++;
-						}
-						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						BroadcastDamage(player, *tgt);
 						break;
 					}
 				}
@@ -341,15 +266,7 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 							_server->Disconnect(tgt->_sessionID);
 						}
 
-						__int64 sessionA[6];
-						int count = 0;
-						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-						{
-							sessionA[count] = cit->first;
-							count++;
-						}
-						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						BroadcastDamage(player, *tgt);
 						break;
 					}
 				}
@@ -372,15 +289,7 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 							_server->Disconnect(tgt->_sessionID);
 						}
 
-						__int64 sessionA[6];
-						int count = 0;
-						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-						{
-							sessionA[count] = cit->first;
-							count++;
-						}
-						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						BroadcastDamage(player, *tgt);
 						break;
 					}
 				}
@@ -400,15 +309,7 @@ void StubForFight::AttackPlayer(const Player& player, unsigned char type)
 							_server->Disconnect(tgt->_sessionID);
 						}
 
-						__int64 sessionA[6];
-						int count = 0;
-						std::unordered_map<SessionID, Player*>::iterator cit = ((FightContents*)_contents)->_playerMap.begin();
-						for (; cit != static_cast<FightContents*>(_contents)->_playerMap.end(); cit++)
-						{
-							sessionA[count] = cit->first;
-							count++;
-						}
-						static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)->ProxySCDamage(sessionA, count, player._id, tgt->_id, tgt->_hp);
+						BroadcastDamage(player, *tgt);
 						break;
 					}
 				}
@@ -439,3 +340,47 @@ bool StubForFight::IsPositionSyncValid(const Player& player, unsigned short x, u
 	return abs(player._x - x) <= dfERROR_RANGE && abs(player._y - y) <= dfERROR_RANGE;
 }
 
+int StubForFight::CollectOtherSessions(__int64 sessionID, __int64(&sessionA)[6]) const
+{
+	int count = 0;
+	auto* contents = static_cast<FightContents*>(_contents);
+
+	for (auto it = contents->_playerMap.begin(); it != contents->_playerMap.end(); ++it)
+	{
+		if (it->first != sessionID)
+		{
+			sessionA[count++] = it->first;
+		}
+	}
+
+	return count;
+}
+
+int StubForFight::CollectAllSessions(__int64(&sessionA)[6]) const
+{
+	int count = 0;
+	auto* contents = static_cast<FightContents*>(_contents);
+
+	for (auto it = contents->_playerMap.begin(); it != contents->_playerMap.end(); ++it)
+	{
+		sessionA[count++] = it->first;
+	}
+
+	return count;
+}
+
+void StubForFight::BroadcastDamage(const Player& attacker, const Player& target) const
+{
+	__int64 sessionA[6];
+	int count = CollectAllSessions(sessionA);
+
+	static_cast<FightProxy*>(static_cast<FightContents*>(_contents)->_proxy)
+		->ProxySCDamage(sessionA, count, attacker._id, target._id, target._hp);
+}
+
+void StubForFight::UpdateActionState(Player& player, unsigned char dir, unsigned short x, unsigned short y) const
+{
+	player._direction = dir;
+	player._x = x;
+	player._y = y;
+}
