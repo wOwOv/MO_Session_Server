@@ -41,6 +41,10 @@ public:
 
 private:
 	void ApplyMovement(Player& player, int frame);
+	void FinishFightAndRelease();
+	void DisconnectRemainingPlayers();
+	BattleResult BuildBattleResult() const;
+	void EnqueueFightFree();
 
 private:
 	std::unordered_map<SessionID, Player* > _playerMap;// non-owning; Player lifetime is managed by FighterServer::_playerPool

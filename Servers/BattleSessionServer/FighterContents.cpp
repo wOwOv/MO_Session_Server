@@ -168,35 +168,9 @@ void FightContents::OnEnter(__int64 sessionID, void* extra)
 	{
 		if (CheckGameEnd() && _end)
 		{
-			_end = 0;
-			std::unordered_map<SessionID, Player*>::iterator cit = _playerMap.begin();
-			for (; cit != _playerMap.end(); cit++)
-			{
-				Player* tgt = cit->second;
-				Disconnect(tgt->_sessionID);
-			}
-
-			BattleResult result;
-			result._matchID = _matchID;
-			for (int i = 0; i < 3; i++)
-			{
-				result._red[i] = _red[i];
-				result._blue[i] = _blue[i];
-			}
-			result._winnerTeam = _winLoss;
-
-			FighterServer* server = (FighterServer*)_mServer;
-			server->RequestSaveBattleResult(result);
-
-			Control* control = server->_controlPool.Alloc();
-			control->_type = CONTROLTYPE::FIGHTFREE;
-			control->_contents = this;
-
-			server->_ctrlQ.Enqueue(control);
-			server->_ctrlCv.notify_one();
+			FinishFightAndRelease();
 			return;
 		}
-
 
 		for (int i = 0; i < 3; ++i)
 		{
@@ -289,33 +263,8 @@ void FightContents::OnLeave(__int64 sessionID, void* extra)
 
 	if (CheckGameEnd()&&_end)
 	{
-		_end = 0;
-		std::unordered_map<SessionID, Player*>::iterator cit = _playerMap.begin();
-		for(;cit!= _playerMap.end(); cit++)
-		{
-			Player* tgt = cit->second;
-			Disconnect(tgt->_sessionID);
-		}
-
-		BattleResult result;
-		result._matchID = _matchID;
-		for (int i = 0; i < 3; i++) 
-		{
-			result._red[i] = _red[i];
-			result._blue[i] = _blue[i];
-		}
-		result._winnerTeam = _winLoss;
-
-		FighterServer* server = (FighterServer*)_mServer;
-		server->RequestSaveBattleResult(result);
-
-		Control* control = server->_controlPool.Alloc();
-		control->_type = CONTROLTYPE::FIGHTFREE;
-		control->_contents = this;
-
-		server->_ctrlQ.Enqueue(control);
-		server->_ctrlCv.notify_one();
-		
+		FinishFightAndRelease();
+		return;
 	}
 }
 
@@ -487,4 +436,47 @@ void FightContents::ApplyMovement(Player& player, int frame)
 
 	player._x = static_cast<std::uint16_t>(newX);
 	player._y = static_cast<std::uint16_t>(newY);
+}
+
+void FightContents::FinishFightAndRelease()
+{
+	_end = 0;
+	DisconnectRemainingPlayers();
+	BattleResult result = BuildBattleResult();
+	FighterServer* server = (FighterServer*)_mServer;
+	server->RequestSaveBattleResult(result);
+	EnqueueFightFree();
+}
+
+void FightContents::DisconnectRemainingPlayers()
+{
+	for (const auto& entry : _playerMap)
+	{
+		Disconnect(entry.second->_sessionID);
+	}
+}
+
+BattleResult FightContents::BuildBattleResult() const
+{
+	BattleResult result;
+	result._matchID = _matchID;
+	for (int i = 0; i < 3; i++)
+	{
+		result._red[i] = _red[i];
+		result._blue[i] = _blue[i];
+	}
+	result._winnerTeam = _winLoss;
+	return result;
+}
+
+void FightContents::EnqueueFightFree()
+{
+	FighterServer* server = (FighterServer*)_mServer;
+
+	Control* control = server->_controlPool.Alloc();
+	control->_type = CONTROLTYPE::FIGHTFREE;
+	control->_contents = this;
+
+	server->_ctrlQ.Enqueue(control);
+	server->_ctrlCv.notify_one();
 }
