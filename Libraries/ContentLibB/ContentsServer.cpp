@@ -1088,41 +1088,67 @@ unsigned __stdcall ContentsServer::TimeOutThread(LPVOID arg)
 
 unsigned __stdcall ContentsServer::FrameScheduler(LPVOID arg)
 {
+	using Clock = std::chrono::steady_clock;
+
+	const std::chrono::milliseconds schedulerTick(10);
+
 	unsigned long long frameCount = 0;
-	ContentsServer* coreserver = (ContentsServer*)arg;
+	ContentsServer* coreserver = static_cast<ContentsServer*>(arg);
+
 	std::vector<__int32> contentsNumList;
 	contentsNumList.reserve(3000);
 
-	while (1)
+	auto nextWakeAt = Clock::now();
+
+	while (true)
 	{
+		nextWakeAt += schedulerTick;
+		std::this_thread::sleep_until(nextWakeAt);
+
 		if (coreserver->_frameSchedulerStop)
 		{
-			return 0;
+			break;
 		}
 
-		Sleep(10);
-		frameCount+=10;
+		frameCount += 10;
 		contentsNumList.clear();
+
 		{
-			SRWSharedLockGuard mapguard(coreserver->_mapKey);
+			SRWSharedLockGuard mapGuard(coreserver->_mapKey);
+
 			for (const auto& entry : coreserver->_contentsMap)
 			{
 				const __int32 contentsNum = entry.first;
 				Contents* contents = entry.second;
-				if (contents->_frame >0 && frameCount % contents->_frame == 0)
+
+				if (contents->_frame > 0 &&
+					frameCount % contents->_frame == 0)
 				{
 					contentsNumList.push_back(contentsNum);
 				}
-
 			}
 		}
-		for(auto contentsNum: contentsNumList)
+
+		// map lock을 해제한 다음 IOCP에 등록
+		for (const __int32 contentsNum : contentsNumList)
 		{
-			PostQueuedCompletionStatus(coreserver->_hcp, contentsNum, contentsNum, (LPOVERLAPPED)103);
+			PostQueuedCompletionStatus(
+				coreserver->_hcp,
+				contentsNum,
+				contentsNum,
+				reinterpret_cast<LPOVERLAPPED>(103));
 		}
 
+		const auto now = Clock::now();
+
+		// 처리가 한 주기 이상 밀렸을 때 밀린 호출을 연속 실행하지 않는다.
+		if (now - nextWakeAt >= schedulerTick)
+		{
+			nextWakeAt = now;
+		}
 	}
 
+	return 0;
 }
 
 
