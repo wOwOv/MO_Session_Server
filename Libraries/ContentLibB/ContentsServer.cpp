@@ -9,6 +9,7 @@
 #include "Logger.h"
 #include <conio.h>
 #include "SRWLockGuard.h"
+#include <vector>
 
 ContentsServer::ContentsServer(ServerType type) : _type(type)
 {
@@ -116,6 +117,7 @@ void ContentsServer::Stop()
 {
 	_coreState = CoreServerState::CORE_STOPPING;
 	StopAcceptThread();
+	StopFrameSchedulerThread();
 	StopWorkerThread();
 	StopTimeOutThread();
 	StopMonitorThread();
@@ -309,10 +311,6 @@ void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents)
 	{
 		contents->_stub->ConnectServer(this);
 	}
-	if (contents->_frame != -1)
-	{
-		PostQueuedCompletionStatus(_hcp, contentsnum, contentsnum, (LPOVERLAPPED)103);//OnUpdatePQCS
-	}
 
 }
 
@@ -463,6 +461,18 @@ void ContentsServer::StopWorkerThread()
 	CheckAllCoreStopped();
 }
 
+void ContentsServer::StopFrameSchedulerThread()
+{
+	_coreState = CoreServerState::CORE_STOPPING;
+	_frameSchedulerStop = TRUE;
+	WaitForSingleObject(_frameSchedulerThread, INFINITE);
+	CloseHandle(_frameSchedulerThread);
+	_frameSchedulerThread = nullptr;
+	LOG(L"SYSTEM", LVSYSTEM, L"ContentsServer Stop FrameScheduler");
+	printf("ContentsServer Stop FrameScheduler\n");
+	CheckAllCoreStopped();
+}
+
 //L,U,S,Q는 제외
 void ContentsServer::OtherServerControl(int controlKey)
 {
@@ -569,6 +579,13 @@ int ContentsServer::Setting(char code, char key)
 	//MonitorThread생성
 	_monitorThread = (HANDLE)_beginthreadex(NULL, 0, &MonitorThread, this, 0, NULL);
 	if (_monitorThread == NULL)
+	{
+		return 1;
+	}
+
+	//FrameScheduler생성
+	_frameSchedulerThread = (HANDLE)_beginthreadex(NULL, 0, &FrameScheduler, this, 0, NULL);
+	if (_frameSchedulerThread == NULL)
 	{
 		return 1;
 	}
@@ -757,36 +774,18 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 		//cbTransferred으로 contentsnum이 들어옴
 		if (gqcsretval != 0 && (long long)myoverlapped == 103)
 		{
-			int frame = 0;
 			{
-				Contents* mappedContents = nullptr;
-				__int32 contentsNum = cbTransferred;
-
 				SRWSharedLockGuard mapGuard(server->_mapKey);
 
 				std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
 				if (tgtc != server->_contentsMap.end())
 				{
 					Contents* contents = tgtc->second;
-					mappedContents = tgtc->second;
 
 					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
 
 					contents->OnUpdate();
 					contents->_fpsCount++;
-					frame = contents->_frame;
-				}
-			}
-
-			Sleep(frame);
-
-			{
-				SRWSharedLockGuard mapGuard(server->_mapKey);
-				std::unordered_map<__int32, Contents*>::iterator tgtit = server->_contentsMap.find(cbTransferred);
-				if (tgtit != server->_contentsMap.end())
-				{
-					Contents* contents = tgtit->second;
-					PostQueuedCompletionStatus(server->_hcp, contents->_contentsNum, contents->_contentsNum, (LPOVERLAPPED)103);
 				}
 			}
 			continue;
@@ -1084,6 +1083,48 @@ unsigned __stdcall ContentsServer::TimeOutThread(LPVOID arg)
 
 	}
 }
+
+
+
+unsigned __stdcall ContentsServer::FrameScheduler(LPVOID arg)
+{
+	unsigned long long frameCount = 0;
+	ContentsServer* coreserver = (ContentsServer*)arg;
+	std::vector<__int32> contentsNumList;
+	contentsNumList.reserve(3000);
+
+	while (1)
+	{
+		if (coreserver->_frameSchedulerStop)
+		{
+			return 0;
+		}
+
+		Sleep(10);
+		frameCount+=10;
+		contentsNumList.clear();
+		{
+			SRWSharedLockGuard mapguard(coreserver->_mapKey);
+			for (const auto& entry : coreserver->_contentsMap)
+			{
+				const __int32 contentsNum = entry.first;
+				Contents* contents = entry.second;
+				if (contents->_frame >0 && frameCount % contents->_frame == 0)
+				{
+					contentsNumList.push_back(contentsNum);
+				}
+
+			}
+		}
+		for(auto contentsNum: contentsNumList)
+		{
+			PostQueuedCompletionStatus(coreserver->_hcp, contentsNum, contentsNum, (LPOVERLAPPED)103);
+		}
+
+	}
+
+}
+
 
 
 bool ContentsServer::Release(SESSION* tgt)
