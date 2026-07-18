@@ -43,10 +43,13 @@ void FighterServer::Stop()
 	//3. Control Thread 중지
 	StopControlThread();
 	printf("Control Thread Stopped\n");
-	//4. Worker Thread 중지
+	//4.FrameScheduler Thread 중지
+	StopFrameSchedulerThread();
+	printf("FrameScheduler Thread Stopped\n");
+	//5. Worker Thread 중지
 	StopWorkerThread();
 	printf("Worker Thread Stopped\n");
-	//5. DB Thread 중지
+	//6. DB Thread 중지
 	StopDBThread();
 	printf("DB Thread Stopped\n");
 	StopMonitorThread();
