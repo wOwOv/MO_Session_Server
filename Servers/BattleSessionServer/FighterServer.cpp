@@ -97,7 +97,6 @@ void FighterServer::OnUnusual(__int64 sessionID, const SOCKADDR_IN& clientaddr)
 
 void FighterServer::OnSecond()
 {
-	printf("\n#######################################################\n######%d######\n#######################################################\n", GetContentsFPS(1));
 }
 
 int FighterServer::GetFightPoolCapacity()
