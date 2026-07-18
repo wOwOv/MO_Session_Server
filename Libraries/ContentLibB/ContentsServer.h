@@ -141,6 +141,7 @@ protected:
 	void StopTimeOutThread();
 	void StopMonitorThread();
 	void StopWorkerThread();
+	void StopFrameSchedulerThread();
 
 	virtual void OtherServerControl(int controlKey);
 
@@ -166,6 +167,8 @@ private:
 	static unsigned __stdcall AcceptThread(LPVOID arg);
 	static unsigned __stdcall MonitorThread(LPVOID arg);
 	static unsigned __stdcall TimeOutThread(LPVOID arg);
+
+	static unsigned __stdcall FrameScheduler(LPVOID arg);
 
 	//WorkerThread가 쓰는 함수들
 	bool Release(SESSION* tgt);
@@ -212,8 +215,10 @@ private:
 	HANDLE* _workerThreads;
 	HANDLE _timeOutThread;
 	HANDLE _monitorThread;
+	HANDLE _frameSchedulerThread;
 	volatile LONG _timeOutThreadStop = FALSE;
 	volatile LONG _monitorThreadStop = FALSE;
+	volatile LONG _frameSchedulerStop = FALSE;
 
 	unsigned char _code;
 	unsigned char _fixedKey;
