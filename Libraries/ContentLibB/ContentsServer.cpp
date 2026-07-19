@@ -10,6 +10,7 @@
 #include <conio.h>
 #include "SRWLockGuard.h"
 #include <vector>
+#include "Profiler.h"
 
 ContentsServer::ContentsServer(ServerType type) : _type(type)
 {
@@ -300,24 +301,43 @@ unsigned long ContentsServer::GetContentsLogic(__int32 contentsnum)
 
 void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents) 
 {
-	SRWExclusiveLockGuard guard(_mapKey);
-	_contentsMap.insert(std::make_pair(contentsnum, contents));
-	contents->_mServer = this;
-	if (contents->_proxy != nullptr)
+	PRO_BEGIN("Register_Total");
+	PRO_BEGIN("Register_MapWait");
 	{
-		contents->_proxy->ConnectServer(this);
+		SRWExclusiveLockGuard guard(_mapKey);
+		PRO_END("Register_MapWait");
+		PRO_BEGIN("Register_MapHold");
+		_contentsMap.insert(std::make_pair(contentsnum, contents));
+		contents->_mServer = this;
+		if (contents->_proxy != nullptr)
+		{
+			contents->_proxy->ConnectServer(this);
+		}
+		if (contents->_stub != nullptr)
+		{
+			contents->_stub->ConnectServer(this);
+		}
+		PRO_END("Register_MapHold");
 	}
-	if (contents->_stub != nullptr)
-	{
-		contents->_stub->ConnectServer(this);
-	}
+
+	PRO_END("Register_Total");
 
 }
 
 void ContentsServer::DeregisterContents(__int32 contentsnum)
 {
-	SRWExclusiveLockGuard guard(_mapKey);
-	_contentsMap.erase(contentsnum);
+	PRO_BEGIN("Deregister_Total");
+	PRO_BEGIN("Deregister_MapWait");
+	{
+		SRWExclusiveLockGuard guard(_mapKey);
+		PRO_END("Deregister_MapWait");
+		PRO_BEGIN("Deregister_MapHold");
+
+		_contentsMap.erase(contentsnum);
+
+		PRO_END("Deregister_MapHold");
+	}
+	PRO_END("Deregister_Total");
 }
 
 void ContentsServer::SetDefaultContents(__int32 contentsnum)
@@ -735,16 +755,21 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 		//OnEnter수행
 		if (gqcsretval != 0 && (long long)myoverlapped == 101)
 		{
-			SRWSharedLockGuard mapGuard(server->_mapKey);
-			std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
-			if (tgtc != server->_contentsMap.end())
+
 			{
-				Contents* contents = tgtc->second;
+				SRWSharedLockGuard mapGuard(server->_mapKey);
+				PRO_BEGIN("Worker_Enter_MapHold");
+				std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
+				if (tgtc != server->_contentsMap.end())
+				{
+					Contents* contents = tgtc->second;
 
-				SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-				contents->OnEnter((__int64)tgt, nullptr);
-				contents->_logicCount++;
+					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+					contents->OnEnter((__int64)tgt, nullptr);
+					contents->_logicCount++;
 
+				}
+				PRO_END("Worker_Enter_MapHold");
 			}
 
 			continue;
@@ -753,19 +778,21 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 		//OnLeave...
 		if (gqcsretval != 0 && (long long)myoverlapped == 102)
 		{
-			SRWSharedLockGuard mapGuard(server->_mapKey);
-
-			std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
-			if (tgtc != server->_contentsMap.end())
 			{
-				Contents* contents = tgtc->second;
+				SRWSharedLockGuard mapGuard(server->_mapKey);
+				PRO_BEGIN("Worker_Leave_MapHold");
+				std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
+				if (tgtc != server->_contentsMap.end())
+				{
+					Contents* contents = tgtc->second;
 
-				SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-				contents->OnLeave((__int64)tgt, nullptr);
-				contents->_logicCount++;
+					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+					contents->OnLeave((__int64)tgt, nullptr);
+					contents->_logicCount++;
 
+				}
+				PRO_END("Worker_Leave_MapHold");
 			}
-
 			
 
 			continue;
@@ -774,9 +801,10 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 		//cbTransferred으로 contentsnum이 들어옴
 		if (gqcsretval != 0 && (long long)myoverlapped == 103)
 		{
+
 			{
 				SRWSharedLockGuard mapGuard(server->_mapKey);
-
+				PRO_BEGIN("Worker_Update_MapHold");
 				std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
 				if (tgtc != server->_contentsMap.end())
 				{
@@ -787,6 +815,7 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 					contents->OnUpdate();
 					contents->_fpsCount++;
 				}
+				PRO_END("Worker_Update_MapHold");
 			}
 			continue;
 		}
@@ -1112,21 +1141,22 @@ unsigned __stdcall ContentsServer::FrameScheduler(LPVOID arg)
 
 		frameCount += 10;
 		contentsNumList.clear();
-
+		PRO_BEGIN("Scheduler_MapWait");
 		{
 			SRWSharedLockGuard mapGuard(coreserver->_mapKey);
-
+			PRO_END("Scheduler_MapWait");
+			PRO_BEGIN("Scheduler_MapHold");
 			for (const auto& entry : coreserver->_contentsMap)
 			{
 				const __int32 contentsNum = entry.first;
 				Contents* contents = entry.second;
 
-				if (contents->_frame > 0 &&
-					frameCount % contents->_frame == 0)
+				if (contents->_frame > 0 &&	frameCount % contents->_frame == 0)
 				{
 					contentsNumList.push_back(contentsNum);
 				}
 			}
+			PRO_END("Scheduler_MapHold");
 		}
 
 		// map lock을 해제한 다음 IOCP에 등록
