@@ -144,7 +144,6 @@
   <ItemGroup>
     <ClInclude Include="BattleDB.h" />
     <ClInclude Include="BattleMonitorMP.h" />
-    <ClInclude Include="BattleMonitorProtocol.h" />
     <ClInclude Include="FighterContents.h" />
     <ClInclude Include="FighterServer.h" />
     <ClInclude Include="FighterStructure.h" />

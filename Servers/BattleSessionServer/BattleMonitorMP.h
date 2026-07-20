@@ -1,7 +1,8 @@
 #pragma once
 #include "CPacket.h"
-#include "BattleMonitorProtocol.h"
+#include "MonitorProtocol.h"
 #include <windows.h>
+
 
 __forceinline void MPGameRun(CPacket* packet, int datavalue, int timestamp)
 {
@@ -67,17 +68,38 @@ __forceinline void MPGameSnd(CPacket* packet, int datavalue, int timestamp)
 	*packet << type << datatype << datavalue << timestamp;
 }
 
-__forceinline void MPGameAuthF(CPacket* packet, int datavalue, int timestamp)
+__forceinline void MPGameDBTPS(CPacket* packet, int datavalue, int timestamp)
 {
 	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
-	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_AUTH_THREAD_FPS;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_WRITE_TPS;
 	*packet << type << datatype << datavalue << timestamp;
 }
 
-__forceinline void MPGameGameF(CPacket* packet, int datavalue, int timestamp)
+__forceinline void MPGameDBMsg(CPacket* packet, int datavalue, int timestamp)
 {
 	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
-	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_GAME_THREAD_FPS;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_WRITE_MSG;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameAlloc(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_FIGHT_ALLOC;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameFree(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_FIGHT_FREE;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameCtrlQ(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_CTRL_Q;
 	*packet << type << datatype << datavalue << timestamp;
 }
 
@@ -92,5 +114,26 @@ __forceinline void MPGameFightUsing(CPacket* packet, int datavalue, int timestam
 {
 	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_FIGHT_CONTENTS_USING;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameFightFPSAvg(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_FIGHT_FPS_AVG;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameFightFPSMin(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_FIGHT_FPS_MIN;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameFightFPSMax(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_FIGHT_FPS_MAX;
 	*packet << type << datatype << datavalue << timestamp;
 }

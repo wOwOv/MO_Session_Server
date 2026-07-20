@@ -138,5 +138,11 @@ private:
 	//모니터링 클라이언트
 	std::unique_ptr<MonitorClient> _monitorClient;
 	std::unique_ptr<PcPDProducer> _pdProducer;
+
+	//모니터링용
+	long _fightAllocCount = 0;
+	long _fightFreeCount = 0;
+	long _dbSaveCount = 0;
+
 };
 

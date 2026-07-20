@@ -59,6 +59,8 @@ void FighterServer::Stop()
 	printf("DB Thread Stopped\n");
 	StopMonitorThread();
 	printf("Monitor Thread Stopped\n");
+	_monitorClient.get()->Stop();
+	printf("MonitorClient Stopped\n");
 }
 
 
@@ -145,6 +147,26 @@ void FighterServer::OnSecond()
 	CPacket sendmsg;
 	MPGameSnd(&sendmsg, data, timestamp);
 
+	data = _dbSaveCount;
+	CPacket dbtpsmsg;
+	MPGameDBTPS(&dbtpsmsg, data, timestamp);
+
+	data = _dbQ.size();
+	CPacket dbqmsg;
+	MPGameDBMsg(&dbqmsg, data, timestamp);
+
+	data = _fightAllocCount;
+	CPacket fightallocmsg;
+	MPGameAlloc(&fightallocmsg, data, timestamp);
+
+	data = _fightFreeCount;
+	CPacket fightfreemsg;
+	MPGameFree(&fightfreemsg, data, timestamp);
+
+	data = _ctrlQ.GetUsedSize();
+	CPacket ctrlqmsg;
+	MPGameCtrlQ(&ctrlqmsg, data, timestamp);
+
 	data = GetSBufferUsingCount();
 	CPacket packetmsg;
 	MPGamePacket(&packetmsg, data, timestamp);
@@ -152,6 +174,18 @@ void FighterServer::OnSecond()
 	data = _fightPool.GetUseCount();
 	CPacket fightmsg;
 	MPGameFightUsing(&fightmsg, data, timestamp);
+
+	data = GetFpsAvg();
+	CPacket fpsavgmsg;
+	MPGameFightFPSAvg(&fpsavgmsg, data, timestamp);
+
+	data = GetFpsMin();
+	CPacket fpsminmsg;
+	MPGameFightFPSMin(&fpsminmsg, data, timestamp);
+
+	data = GetFpsMax();
+	CPacket fpsmaxmsg;
+	MPGameFightFPSMax(&fpsmaxmsg, data, timestamp);
 
 	if (_monitorClient.get() != nullptr)
 	{
@@ -164,11 +198,21 @@ void FighterServer::OnSecond()
 		_monitorClient.get()->SendPacket(acpmsg);
 		_monitorClient.get()->SendPacket(recvmsg);
 		_monitorClient.get()->SendPacket(sendmsg);
+		_monitorClient.get()->SendPacket(dbtpsmsg);
+		_monitorClient.get()->SendPacket(dbqmsg);
+		_monitorClient.get()->SendPacket(fightallocmsg);
+		_monitorClient.get()->SendPacket(fightfreemsg);
+		_monitorClient.get()->SendPacket(ctrlqmsg);
 		_monitorClient.get()->SendPacket(packetmsg);
 		_monitorClient.get()->SendPacket(fightmsg);
+		_monitorClient.get()->SendPacket(fpsavgmsg);
+		_monitorClient.get()->SendPacket(fpsminmsg);
+		_monitorClient.get()->SendPacket(fpsmaxmsg);
 	}
 
-
+	_fightAllocCount = 0;
+	_fightFreeCount = 0;
+	_dbSaveCount = 0;
 
 }
 
@@ -357,10 +401,12 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 			{
 			case CONTROLTYPE::FIGHTALLOC:
 				server->HandleFightAlloc(*control, cnum);
+				server->_fightAllocCount++;
 				break;
 
 			case CONTROLTYPE::FIGHTFREE:
 				server->HandleFightFree(*control);
+				server->_fightFreeCount++;
 				break;
 
 			case CONTROLTYPE::MATCHDEREGISTER:
@@ -406,7 +452,7 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 					L"Battle result DB save failed. match_id=%lld",
 					request._battleResult._matchID);
 			}
-
+			server->_dbSaveCount++;
 			break;
 		}
 
