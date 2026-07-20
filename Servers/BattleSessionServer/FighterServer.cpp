@@ -3,6 +3,7 @@
 #include "BattleDB.h"
 #include <thread>
 #include <mutex>
+#include "BattleMonitorMP.h"
 
 
 FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
@@ -14,6 +15,10 @@ FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGe
 	_matchContents = std::make_unique<MatchContents>();
 	RegisterContents(MATCH, _matchContents.get());
 	SetDefaultContents(MATCH);
+	_pdProducer = std::make_unique<PcPDProducer>();
+	_monitorClient = std::make_unique<MonitorClient>(217);
+	_monitorClient.get()->Start("MonitorClient_Config.txt");
+
 }
 
 FighterServer::~FighterServer()
@@ -97,6 +102,74 @@ void FighterServer::OnUnusual(__int64 sessionID, const SOCKADDR_IN& clientaddr)
 
 void FighterServer::OnSecond()
 {
+	int data;
+	int timestamp;
+	time_t temptime;
+
+	data = 1;
+	time(&temptime);
+	timestamp = (int)temptime;
+	CPacket runmsg;
+	MPGameRun(&runmsg, data, timestamp);
+
+	data = _pdProducer.get()->ProcessTotal();
+	CPacket cpumsg;
+	MPGameCpu(&cpumsg, data, timestamp);
+
+	data = _pdProducer.get()->GetUserM();
+	data /= 1024 * 1024;
+	CPacket memmsg;
+	MPGameMem(&memmsg, data, timestamp);
+
+	data = GetSessionCount();
+	CPacket sesmsg;
+	MPGameSes(&sesmsg, data, timestamp);
+
+	data = _matchContents.get()->GetPlayerCount();
+	CPacket matmsg;
+	MPGameAuthP(&matmsg, data, timestamp);
+
+	data = GetSessionCount() - _matchContents.get()->GetPlayerCount();
+	CPacket figmsg;
+	MPGameGameP(&figmsg, data, timestamp);
+
+	data = GetAcceptTPS();
+	CPacket acpmsg;
+	MPGameAcp(&acpmsg, data, timestamp);
+
+	data = GetRecvMessageTPS();
+	CPacket recvmsg;
+	MPGameRcv(&recvmsg, data, timestamp);
+
+	data = GetSendMessageTPS();
+	CPacket sendmsg;
+	MPGameSnd(&sendmsg, data, timestamp);
+
+	data = GetSBufferUsingCount();
+	CPacket packetmsg;
+	MPGamePacket(&packetmsg, data, timestamp);
+
+	data = _fightPool.GetUseCount();
+	CPacket fightmsg;
+	MPGameFightUsing(&fightmsg, data, timestamp);
+
+	if (_monitorClient.get() != nullptr)
+	{
+		_monitorClient.get()->SendPacket(runmsg);
+		_monitorClient.get()->SendPacket(cpumsg);
+		_monitorClient.get()->SendPacket(memmsg);
+		_monitorClient.get()->SendPacket(sesmsg);
+		_monitorClient.get()->SendPacket(matmsg);
+		_monitorClient.get()->SendPacket(figmsg);
+		_monitorClient.get()->SendPacket(acpmsg);
+		_monitorClient.get()->SendPacket(recvmsg);
+		_monitorClient.get()->SendPacket(sendmsg);
+		_monitorClient.get()->SendPacket(packetmsg);
+		_monitorClient.get()->SendPacket(fightmsg);
+	}
+
+
+
 }
 
 int FighterServer::GetFightPoolCapacity()

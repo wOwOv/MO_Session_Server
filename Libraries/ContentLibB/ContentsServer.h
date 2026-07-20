@@ -121,6 +121,9 @@ public:
 	unsigned long GetSBufferUsingCount();
 	unsigned long GetContentsFPS(std::int32_t contentsnum);
 	unsigned long GetContentsLogic(std::int32_t contentsnum);
+	long GetFpsMin();
+	long GetFpsMax();
+	long GetFpsAvg();
 
 
 	void RegisterContents(std::int32_t contentsnum, Contents* contents);
@@ -203,6 +206,9 @@ private:
 	long _sendCount = 0;
 	std::int64_t _sessionKey = 1;
 
+	long _fpsMin = 0;
+	long _fpsMax = 0;
+	long _fpsAvg = 0;
 
 private:
 	CoreServerState _coreState = CoreServerState::CORE_CREATED;

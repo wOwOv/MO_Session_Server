@@ -270,6 +270,21 @@ unsigned long ContentsServer::GetSBufferUsingCount()
 	return SBuffer::BufPool.GetUsingCount();
 }
 
+long ContentsServer::GetFpsMin()
+{
+	return _fpsMin;
+}
+
+long ContentsServer::GetFpsMax()
+{
+	return _fpsMax;
+}
+
+long ContentsServer::GetFpsAvg()
+{
+	return _fpsAvg;
+}
+
 unsigned long ContentsServer::GetContentsFPS(__int32 contentsnum)
 {
 	unsigned long ret = 0;
