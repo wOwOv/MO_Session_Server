@@ -51,11 +51,11 @@ private:
 	SRWLOCK _contentsKey;
 
 private:
-	unsigned long _fps=0;
-	unsigned long _fpsCount=0;
+	long _fps=0;
+	long _fpsCount=0;
 
-	unsigned long _logic=0;
-	unsigned long _logicCount=0;
+	long _logic=0;
+	long _logicCount=0;
 
 protected:
 	ContentsServer* _mServer=nullptr;	// // non-owning back-reference to ContentsServer

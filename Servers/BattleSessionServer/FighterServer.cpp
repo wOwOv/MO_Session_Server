@@ -114,11 +114,11 @@ void FighterServer::OnSecond()
 	CPacket runmsg;
 	MPGameRun(&runmsg, data, timestamp);
 
-	data = _pdProducer.get()->ProcessTotal();
+	data = static_cast<int>(_pdProducer.get()->ProcessTotal());
 	CPacket cpumsg;
 	MPGameCpu(&cpumsg, data, timestamp);
 
-	data = _pdProducer.get()->GetUserM();
+	data = static_cast<int>(_pdProducer.get()->GetUserM());
 	data /= 1024 * 1024;
 	CPacket memmsg;
 	MPGameMem(&memmsg, data, timestamp);
@@ -151,7 +151,7 @@ void FighterServer::OnSecond()
 	CPacket dbtpsmsg;
 	MPGameDBTPS(&dbtpsmsg, data, timestamp);
 
-	data = _dbQ.size();
+	data = static_cast<int>(_dbQ.size());
 	CPacket dbqmsg;
 	MPGameDBMsg(&dbqmsg, data, timestamp);
 

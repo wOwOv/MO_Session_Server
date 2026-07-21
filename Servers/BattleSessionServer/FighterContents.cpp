@@ -97,7 +97,7 @@ void MatchContents::OnShutDown()
 
 int MatchContents::GetPlayerCount()
 {
-	return _playerMap.size();
+	return static_cast<int>(_playerMap.size());
 }
 
 bool MatchContents::CheckStopRequested()

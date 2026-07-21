@@ -1039,7 +1039,7 @@ unsigned __stdcall ContentsServer::MonitorThread(LPVOID arg)
 		unsigned long long fpsSum = 0;
 		{
 			SRWSharedLockGuard mapGuard(coreserver->_mapKey);
-			contentsCount = coreserver->_contentsMap.size();
+			contentsCount = static_cast<int>(coreserver->_contentsMap.size());
 			std::unordered_map<__int32, Contents*>::iterator it = coreserver->_contentsMap.begin();
 			for (; it != coreserver->_contentsMap.end(); it++)
 			{
@@ -1063,7 +1063,7 @@ unsigned __stdcall ContentsServer::MonitorThread(LPVOID arg)
 
 		if (contentsCount > 0)
 		{
-			coreserver->_fpsAvg = fpsSum / contentsCount;
+			coreserver->_fpsAvg = static_cast<long>(fpsSum / contentsCount);
 		}
 		else
 		{
