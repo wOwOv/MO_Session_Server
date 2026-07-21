@@ -47,7 +47,7 @@ void CoreClient::Stop()
 		PostQueuedCompletionStatus(hcp, 0, p, po);
 	}
 
-	//monitorThread종료되길 대기->monitorthread는 accept스레드,워커스레드들 다 종료된 후 리턴하기에
+	//monitorThread종료되길 대기->monitorthread는 워커스레드들 다 종료된 후 리턴하기에
 	if (_heartbeatVal == 0)
 	{
 		WaitForSingleObject(Thread[2], INFINITE);
@@ -317,7 +317,6 @@ unsigned __stdcall CoreClient::WorkerThread(LPVOID arg)
 				DWORD temp1, temp2;
 				WSAGetOverlappedResult(coreclient->Sock, &myoverlapped->overlapped, &temp1, FALSE, &temp2);
 				//printf("GetQueuedCompletionStatus error : %d\n", gqcsretval);
-				coreclient->Stop();
 			}
 		}
 		//비동기 입출력 성공
