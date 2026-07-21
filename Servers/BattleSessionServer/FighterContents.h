@@ -14,6 +14,8 @@ public:
 	virtual void OnUpdate() override;
 	virtual void OnShutDown() override;
 
+	int GetPlayerCount();
+
 private:
 	void DisconnectAllPlayer();
 	bool CheckStopRequested();

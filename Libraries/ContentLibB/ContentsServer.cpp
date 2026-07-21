@@ -270,6 +270,21 @@ unsigned long ContentsServer::GetSBufferUsingCount()
 	return SBuffer::BufPool.GetUsingCount();
 }
 
+long ContentsServer::GetFpsMin()
+{
+	return _fpsMin;
+}
+
+long ContentsServer::GetFpsMax()
+{
+	return _fpsMax;
+}
+
+long ContentsServer::GetFpsAvg()
+{
+	return _fpsAvg;
+}
+
 unsigned long ContentsServer::GetContentsFPS(__int32 contentsnum)
 {
 	unsigned long ret = 0;
@@ -1017,17 +1032,42 @@ unsigned __stdcall ContentsServer::MonitorThread(LPVOID arg)
 		coreserver->_sendMessageTPS = coreserver->_sendCount;
 		InterlockedExchange(&coreserver->_sendCount, 0);
 
+
+		int contentsCount = 0;
+		int FPSMin = 55;
+		int FPSMax = 0;
+		unsigned long long fpsSum = 0;
 		{
 			SRWSharedLockGuard mapGuard(coreserver->_mapKey);
+			contentsCount = static_cast<int>(coreserver->_contentsMap.size());
 			std::unordered_map<__int32, Contents*>::iterator it = coreserver->_contentsMap.begin();
 			for (; it != coreserver->_contentsMap.end(); it++)
 			{
 				Contents* contents = it->second;
+				if (contents->_frame == -1)
+				{
+					contentsCount--;
+					continue;
+				}
 				contents->_fps = contents->_fpsCount;
 				contents->_fpsCount = 0;
 				contents->_logic = contents->_logicCount;
 				contents->_logicCount = 0;
+				fpsSum += contents->_fps;
+				FPSMin = min(FPSMin, contents->_fps);
+				FPSMax = max(FPSMax, contents->_fps);
 			}
+		}
+		coreserver->_fpsMax = FPSMax;
+		coreserver->_fpsMin = FPSMin;
+
+		if (contentsCount > 0)
+		{
+			coreserver->_fpsAvg = static_cast<long>(fpsSum / contentsCount);
+		}
+		else
+		{
+			coreserver->_fpsAvg = -1;
 		}
 
 		coreserver->OnSecond();

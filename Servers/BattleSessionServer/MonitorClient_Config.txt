@@ -1,0 +1,12 @@
+﻿CoreClient_Config
+{
+IP:127.0.0.1
+Port:20790
+Heartbeat:0
+HeartbeatCycle:10
+}
+
+IP: connect ip
+Port: connect port
+Heartbeat: 하트비트 메시지를 보낼지 말지 0:기능 끄기 1:기능 켜기
+HearbeatCycle:보내는 메시지가 없을때 하트비트 메시지를 보낼 주기
