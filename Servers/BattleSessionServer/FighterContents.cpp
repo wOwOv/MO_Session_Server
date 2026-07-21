@@ -95,6 +95,11 @@ void MatchContents::OnShutDown()
 	DisconnectAllPlayer();
 }
 
+int MatchContents::GetPlayerCount()
+{
+	return static_cast<int>(_playerMap.size());
+}
+
 bool MatchContents::CheckStopRequested()
 {
 	if (_playerMap.empty() && _stopRequested.load() == true)
