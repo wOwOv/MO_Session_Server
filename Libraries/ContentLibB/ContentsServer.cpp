@@ -290,10 +290,10 @@ unsigned long ContentsServer::GetContentsFPS(__int32 contentsnum)
 {
 	unsigned long ret = 0;
 	SRWSharedLockGuard guard(_mapKey);
-	std::unordered_map<__int32, Contents*>::iterator it = _contentsMap.find(contentsnum);
+	std::unordered_map<__int32, std::shared_ptr<Contents>>::iterator it = _contentsMap.find(contentsnum);
 	if (it != _contentsMap.end())
 	{
-		Contents* contents = it->second;
+		Contents* contents = it->second.get();
 		ret = contents->GetFPS();
 	}
 	return ret;
@@ -303,10 +303,10 @@ unsigned long ContentsServer::GetContentsLogic(__int32 contentsnum)
 {
 	unsigned long ret = 0;
 	SRWSharedLockGuard guard(_mapKey);
-	std::unordered_map<__int32, Contents*>::iterator it = _contentsMap.find(contentsnum);
+	std::unordered_map<__int32, std::shared_ptr<Contents>>::iterator it = _contentsMap.find(contentsnum);
 	if (it != _contentsMap.end())
 	{
-		Contents* contents = it->second;
+		Contents* contents = it->second.get();
 		ret = contents->GetLogic();
 	}
 	return ret;
@@ -314,7 +314,7 @@ unsigned long ContentsServer::GetContentsLogic(__int32 contentsnum)
 
 
 
-void ContentsServer::RegisterContents(__int32 contentsnum, Contents* contents) 
+void ContentsServer::RegisterContents(__int32 contentsnum, const std::shared_ptr<Contents>& contents)
 {
 	PRO_BEGIN("Register_Total");
 	PRO_BEGIN("Register_MapWait");
@@ -343,12 +343,19 @@ void ContentsServer::DeregisterContents(__int32 contentsnum)
 {
 	PRO_BEGIN("Deregister_Total");
 	PRO_BEGIN("Deregister_MapWait");
+	std::shared_ptr<Contents> removedContents;
+
 	{
 		SRWExclusiveLockGuard guard(_mapKey);
 		PRO_END("Deregister_MapWait");
 		PRO_BEGIN("Deregister_MapHold");
 
-		_contentsMap.erase(contentsnum);
+		const auto it = _contentsMap.find(contentsnum);
+		if (it != _contentsMap.end())
+		{
+			removedContents = std::move(it->second);
+			_contentsMap.erase(it);
+		}
 
 		PRO_END("Deregister_MapHold");
 	}
@@ -770,67 +777,70 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 		//OnEnter수행
 		if (gqcsretval != 0 && (long long)myoverlapped == 101)
 		{
-
+			std::shared_ptr<Contents> contents;
 			{
 				SRWSharedLockGuard mapGuard(server->_mapKey);
 				PRO_BEGIN("Worker_Enter_MapHold");
-				std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
-				if (tgtc != server->_contentsMap.end())
+				const auto it = server->_contentsMap.find(cbTransferred);
+				if (it != server->_contentsMap.end())
 				{
-					Contents* contents = tgtc->second;
-
-					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-					contents->OnEnter((__int64)tgt, nullptr);
-					contents->_logicCount++;
-
+					contents = it->second;
 				}
 				PRO_END("Worker_Enter_MapHold");
 			}
-
+			if (contents != nullptr)
+			{
+				SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+				contents->OnEnter((__int64)tgt, nullptr);
+				contents->_logicCount++;
+			}
 			continue;
-
 		}
+		
 		//OnLeave...
 		if (gqcsretval != 0 && (long long)myoverlapped == 102)
 		{
+			std::shared_ptr<Contents> contents;
 			{
 				SRWSharedLockGuard mapGuard(server->_mapKey);
 				PRO_BEGIN("Worker_Leave_MapHold");
-				std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
-				if (tgtc != server->_contentsMap.end())
+				const auto it = server->_contentsMap.find(cbTransferred);
+				if (it != server->_contentsMap.end())
 				{
-					Contents* contents = tgtc->second;
-
-					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-					contents->OnLeave((__int64)tgt, nullptr);
-					contents->_logicCount++;
-
+					contents = it->second;
 				}
 				PRO_END("Worker_Leave_MapHold");
 			}
-			
+			if (contents != nullptr)
+			{
+				SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+				contents->OnLeave((__int64)tgt, nullptr);
+				contents->_logicCount++;
 
+			}
 			continue;
 		}
 		//OnUpdate...
 		//cbTransferred으로 contentsnum이 들어옴
 		if (gqcsretval != 0 && (long long)myoverlapped == 103)
 		{
-
+			std::shared_ptr<Contents> contents;
 			{
 				SRWSharedLockGuard mapGuard(server->_mapKey);
 				PRO_BEGIN("Worker_Update_MapHold");
-				std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
-				if (tgtc != server->_contentsMap.end())
+				const auto it = server->_contentsMap.find(cbTransferred);
+				if (it != server->_contentsMap.end())
 				{
-					Contents* contents = tgtc->second;
-
-					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-
-					contents->OnUpdate();
-					contents->_fpsCount++;
+					contents = it->second;
 				}
 				PRO_END("Worker_Update_MapHold");
+			}
+			if (contents != nullptr)
+			{
+				SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+
+				contents->OnUpdate();
+				contents->_fpsCount++;
 			}
 			continue;
 		}
@@ -838,18 +848,22 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 		//OnShutDown
 		if (gqcsretval != 0 && (long long)myoverlapped == 104)
 		{
-			SRWSharedLockGuard mapGuard(server->_mapKey);
 
-			std::unordered_map<__int32, Contents*>::iterator tgtc = server->_contentsMap.find(cbTransferred);
-			if (tgtc != server->_contentsMap.end())
+			std::shared_ptr<Contents> contents;
 			{
-				Contents* contents = tgtc->second;
+				SRWSharedLockGuard mapGuard(server->_mapKey);
+				const auto it = server->_contentsMap.find(cbTransferred);
+				if (it != server->_contentsMap.end())
+				{
+					contents = it->second;
+				}
+			}
+			if (contents != nullptr)
+			{
 				SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
 				contents->OnShutDown();
 				contents->_logicCount++;
 			}
-
-
 			continue;
 		}
 
@@ -997,20 +1011,24 @@ unsigned __stdcall ContentsServer::AcceptThread(LPVOID arg)
 			CreateIoCompletionPort((HANDLE)tgt->_sock, coreserver->_hcp, (ULONG_PTR)tgt, 0);
 
 			coreserver->OnAccept(clientaddr, tgt->_sessionID);
+			std::shared_ptr<Contents> contents;
 			if (tgt->_contentsNum != 0)
 			{
 				SRWSharedLockGuard mapGuard(coreserver->_mapKey);
-				std::unordered_map<__int32, Contents*>::iterator tgtc = coreserver->_contentsMap.find(tgt->_contentsNum);
-				if (tgtc != coreserver->_contentsMap.end())
+				const auto it = coreserver->_contentsMap.find(tgt->_contentsNum);
+				if (it != coreserver->_contentsMap.end())
 				{
-					Contents* contents = tgtc->second;
-
-					SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-					contents->OnEnter(tgt->_sessionID, nullptr);
-
+					contents = it->second;
 				}
+			}
+			if (contents != nullptr)
+			{
+				SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+				contents->OnEnter(tgt->_sessionID, nullptr);
 
 			}
+
+
 
 			//비동기 입출력 시작
 			WSABUF wsabuf;
@@ -1066,27 +1084,34 @@ unsigned __stdcall ContentsServer::MonitorThread(LPVOID arg)
 		int FPSMin = 55;
 		int FPSMax = 0;
 		unsigned long long fpsSum = 0;
+
+		std::vector<std::shared_ptr<Contents>> contentsSnapshot;
+
 		{
 			SRWSharedLockGuard mapGuard(coreserver->_mapKey);
+			contentsSnapshot.reserve(coreserver->_contentsMap.size());
 			contentsCount = static_cast<int>(coreserver->_contentsMap.size());
-			std::unordered_map<__int32, Contents*>::iterator it = coreserver->_contentsMap.begin();
-			for (; it != coreserver->_contentsMap.end(); it++)
+			for (const auto& entry : coreserver->_contentsMap)
 			{
-				Contents* contents = it->second;
-				if (contents->_frame == -1)
-				{
-					contentsCount--;
-					continue;
-				}
-				contents->_fps = contents->_fpsCount;
-				contents->_fpsCount = 0;
-				contents->_logic = contents->_logicCount;
-				contents->_logicCount = 0;
-				fpsSum += contents->_fps;
-				FPSMin = min(FPSMin, contents->_fps);
-				FPSMax = max(FPSMax, contents->_fps);
+				contentsSnapshot.push_back(entry.second);
 			}
 		}
+		for (const auto& contents : contentsSnapshot)
+		{
+			if (contents->_frame == -1)
+			{
+				contentsCount--;
+				continue;
+			}
+			contents->_fps = contents->_fpsCount;
+			contents->_fpsCount = 0;
+			contents->_logic = contents->_logicCount;
+			contents->_logicCount = 0;
+			fpsSum += contents->_fps;
+			FPSMin = min(FPSMin, contents->_fps);
+			FPSMax = max(FPSMax, contents->_fps);
+		}
+
 		coreserver->_fpsMax = FPSMax;
 		coreserver->_fpsMin = FPSMin;
 
@@ -1188,12 +1213,10 @@ unsigned __stdcall ContentsServer::FrameScheduler(LPVOID arg)
 			PRO_BEGIN("Scheduler_MapHold");
 			for (const auto& entry : coreserver->_contentsMap)
 			{
-				const __int32 contentsNum = entry.first;
-				Contents* contents = entry.second;
-
-				if (contents->_frame > 0 &&	frameCount % contents->_frame == 0)
+				if (entry.second->_frame > 0 &&
+					frameCount % entry.second->_frame == 0)
 				{
-					contentsNumList.push_back(contentsNum);
+					contentsNumList.push_back(entry.first);
 				}
 			}
 			PRO_END("Scheduler_MapHold");
@@ -1242,17 +1265,22 @@ bool ContentsServer::Release(SESSION* tgt)
 	//메모리풀 스택 방식
 	InterlockedDecrement(&_sessionCount);
 	int32_t contentsnum = tgt->_contentsNum;
+	std::shared_ptr<Contents> contents;
 	if (contentsnum != 0 && contentsnum != -1)
 	{
 		SRWSharedLockGuard mapGuard(_mapKey);
-		std::unordered_map<__int32, Contents*>::iterator tgtc = _contentsMap.find(tgt->_contentsNum);
-		if (tgtc != _contentsMap.end())
+		const auto it = _contentsMap.find(tgt->_contentsNum);
+		if (it != _contentsMap.end())
 		{
-			Contents* contents = tgtc->second;
-			SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
-			contents->OnLeave(tgt->_sessionID, nullptr);
+			contents = it->second;
 		}
 	}
+	if (contents != nullptr)
+	{
+		SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
+		contents->OnLeave(tgt->_sessionID, nullptr);
+	}
+
 
 	OnRelease(tgt->_sessionID, tgt->_contentsNum);
 
@@ -1401,11 +1429,18 @@ void ContentsServer::RecvCompletion(SESSION* tgt, DWORD cbTransferred)
 	}
 	else if (tgt->_contentsNum != -1)					//특정 컨텐츠에 속함
 	{
-		SRWSharedLockGuard mapGuard(_mapKey);
-		std::unordered_map<__int32, Contents*>::iterator tgtc = _contentsMap.find(tgt->_contentsNum);
-		if (tgtc != _contentsMap.end())
+		std::shared_ptr<Contents> contents;
 		{
-			Contents* contents = tgtc->second;
+			SRWSharedLockGuard mapGuard(_mapKey);
+			const auto it = _contentsMap.find(tgt->_contentsNum);
+			if (it != _contentsMap.end())
+			{
+				contents = it->second;
+			}
+		}
+
+		if (contents!=nullptr)
+		{
 			//컨텐츠 로직 순차적
 			SRWExclusiveLockGuard contentsGuard(contents->_contentsKey);
 

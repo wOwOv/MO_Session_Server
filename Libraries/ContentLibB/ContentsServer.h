@@ -12,6 +12,7 @@
 #include "LockFreeStack.h"
 #include <shared_mutex>
 #include <cstdint>
+#include <memory>
 
 static constexpr int CPACKET_BOX_MAX = 500;
 
@@ -126,7 +127,7 @@ public:
 	long GetFpsAvg();
 
 
-	void RegisterContents(std::int32_t contentsnum, Contents* contents);
+	void RegisterContents(std::int32_t contentsnum, const std::shared_ptr<Contents>& contents);
 	void DeregisterContents(std::int32_t contentsnum);
 
 	void SetDefaultContents(std::int32_t contentsnum);
@@ -233,7 +234,7 @@ private:
 	LFStack<int> _indexArray;
 
 private:
-	std::unordered_map<std::int32_t, Contents*> _contentsMap;		// non-owning; lifetime managed by owner (e.g., FighterServer or pool)
+	std::unordered_map<std::int32_t, std::shared_ptr<Contents>> _contentsMap;		// shared ownership; map retains registered Contents lifetime
 	SRWLOCK _mapKey;
 	friend class Contents;
 
