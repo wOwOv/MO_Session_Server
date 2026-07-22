@@ -15,10 +15,6 @@ void ProfileEnd(const char* szName);
 //마이크로초
 void ProfileDataOutText(void);
 
-//클럭수
-void ProfileDataOutTextQ(void);
-
-void ProfileReset(void);
 
 #define ARRMAX 20
 

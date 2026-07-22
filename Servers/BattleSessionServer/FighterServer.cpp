@@ -4,6 +4,7 @@
 #include <thread>
 #include <mutex>
 #include "BattleMonitorMP.h"
+#include "Profiler.h"
 
 
 FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
@@ -214,6 +215,13 @@ void FighterServer::OnSecond()
 	_fightFreeCount = 0;
 	_dbSaveCount = 0;
 
+	static int timecount = 0;
+	timecount++;
+	if(timecount%(60*10)==0)
+	{
+		ProfileDataOutText();
+	}
+
 }
 
 int FighterServer::GetFightPoolCapacity()
@@ -304,6 +312,10 @@ void FighterServer::OtherServerControl(int controlKey)
 	if (controlKey == 'B' || controlKey == 'b')
 	{
 		_shutDown = true;
+	}
+	if(controlKey=='P'||controlKey=='p')
+	{
+		ProfileDataOutText();
 	}
 }
 

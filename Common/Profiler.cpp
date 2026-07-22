@@ -3,316 +3,248 @@
 #include "Profiler.h"
 #include <vector>
 #include <mutex>
-
-using namespace std;
+#include <array>
+#include <map>
+#include <memory>
+#include <string>
+#include <atomic>
+#include <cstring>
 
 struct stProfile {
 	long Flag = 0;				// 프로파일의 사용 여부. (배열시에만)
 	char Name[64] = {};		// 프로파일 샘플 이름.
 	LARGE_INTEGER StartTime = {};			// 프로파일 샘플 실행 시간.
 	__int64 TotalTime = 0;		// 전체 사용시간 카운터 Time.	(출력시 호출회수로 나누어 평균 구함)
-	__int64 Min[2] = { -1,-1 };			// 최소 사용시간 카운터 Time.	(초단위로 계산하여 저장 / [0] 가장최소 [1] 다음 최소 [2])
-	__int64 Max[2] = { 0, 0 };		// 최대 사용시간 카운터 Time.	(초단위로 계산하여 저장 / [0] 가장최대 [1] 다음 최대 [2])
+	__int64 Min = -1;			// 최소 사용시간 카운터 Time.	(초단위로 계산하여 저장 / [0] 가장최소 [1] 다음 최소 [2])
+	__int64 Max = 0;		// 최대 사용시간 카운터 Time.	(초단위로 계산하여 저장 / [0] 가장최대 [1] 다음 최대 [2])
 	__int64 Call = 0;			// 누적 호출 횟수.
-	long flag = 0; //1이면 profilebegin, 0이면 안 한 것
+	long IsRunning = 0;
 
 };
 
-struct tlspointer
+struct ThreadProfileState
 {
-	DWORD id;
-	stProfile* profilepointer;
+	DWORD threadId = 0;
+	std::mutex mutex;
+	std::array<stProfile, ARRMAX> profiles{};
 };
 
-__declspec(thread) bool tlsflag = 0;
-__declspec(thread) stProfile PArr[ARRMAX];
+__declspec(thread) ThreadProfileState* g_tlsProfile = nullptr;
 
+std::mutex g_profileRegistryMutex;
+std::vector<std::unique_ptr<ThreadProfileState>> g_threadProfiles;
+std::atomic<long> g_profileOutputNumber{ 0 };
 
-vector<tlspointer> ProfilePointer;
-std::mutex g_profilePointerMutex;
+namespace
+{
+	ThreadProfileState& GetThreadProfileState()
+	{
+		if (g_tlsProfile != nullptr)
+		{
+			return *g_tlsProfile;
+		}
 
-int txtnum;
-int txtnumQ;
+		auto state = std::make_unique<ThreadProfileState>();
+		state->threadId = GetCurrentThreadId();
+
+		ThreadProfileState* rawState = state.get();
+
+		{
+			std::lock_guard<std::mutex> lock(g_profileRegistryMutex);
+			g_threadProfiles.push_back(std::move(state));
+		}
+
+		g_tlsProfile = rawState;
+		return *g_tlsProfile;
+	}
+}
+
 
 //Profiling 시작하기
-void ProfileBegin(const char* szName)
+void ProfileBegin(const char* name)
 {
-	if (tlsflag == 0)
-	{
-		tlspointer box;
-		box.id = GetCurrentThreadId();
-		box.profilepointer = PArr;
-		{
-			std::lock_guard<std::mutex> lock(g_profilePointerMutex);
-			ProfilePointer.push_back(box);
-		}
-		tlsflag = 1;
-	}
+	ThreadProfileState& state = GetThreadProfileState();
+	std::lock_guard<std::mutex> lock(state.mutex);
 
-	int idx = 0;
-	for (; idx < ARRMAX; idx++)
+	for (stProfile& profile : state.profiles)
 	{
-		if (PArr[idx].Flag)
+		if (profile.Flag != 0 && strcmp(profile.Name, name) == 0)
 		{
-			//if (PArr[idx].Call == 0)
-			//{
-			//	throw 1;
-			//	//DebugBreak();
-			//}
-			if (strcmp(PArr[idx].Name, szName) == 0)
+			if (profile.IsRunning != 0)
 			{
-				//중복 profilebegin확인
-				if (PArr[idx].flag != 0)
-				{
-					DebugBreak();
-				}
-				PArr[idx].flag = 1;
-
-				QueryPerformanceCounter(&PArr[idx].StartTime);
-				break;
+				DebugBreak();
 			}
+
+			profile.IsRunning = 1;
+			QueryPerformanceCounter(&profile.StartTime);
+			return;
 		}
 	}
 
-	if (idx == ARRMAX)
+	for (stProfile& profile : state.profiles)
 	{
-		for (idx = 0; idx < ARRMAX; idx++)
+		if (profile.Flag == 0)
 		{
-			if (!PArr[idx].Flag)
-			{
-				PArr[idx].Flag = true;
-				strcpy_s(PArr[idx].Name, sizeof(PArr[idx].Name), szName);
-				QueryPerformanceCounter(&PArr[idx].StartTime);
-
-				//중복 profilebegin확인
-				if (PArr[idx].flag != 0)
-				{
-					DebugBreak();
-				}
-				PArr[idx].flag = 1;
-				break;
-			}
+			profile.Flag = 1;
+			strcpy_s(profile.Name, name);
+			profile.IsRunning = 1;
+			QueryPerformanceCounter(&profile.StartTime);
+			return;
 		}
 	}
+
+	DebugBreak(); // ARRMAX 슬롯 부족
 }
 
 
 //Profiling 끝내기
-void ProfileEnd(const char* szName)
+void ProfileEnd(const char* name)
 {
-	int idx = 0;
-	for (; idx < ARRMAX; idx++)
+	LARGE_INTEGER endTime;
+	QueryPerformanceCounter(&endTime);
+
+	ThreadProfileState& state = GetThreadProfileState();
+	std::lock_guard<std::mutex> lock(state.mutex);
+
+	for (stProfile& profile : state.profiles)
 	{
-		if (PArr[idx].Flag)
+		if (profile.Flag == 0 || strcmp(profile.Name, name) != 0)
 		{
-			if (strcmp(PArr[idx].Name, szName) == 0)
-			{
-				break;
-			}
+			continue;
 		}
-	}
-	if (idx == ARRMAX)
-	{
-		//throw 1;
-		DebugBreak();
-	}
-	//총시간에 걸린 시간 더하기
-	LARGE_INTEGER End;
-	QueryPerformanceCounter(&End);
-	LARGE_INTEGER Time;
-	Time.QuadPart = End.QuadPart - PArr[idx].StartTime.QuadPart;
 
-	//중복 profileend 확인
-	if (PArr[idx].flag != 1)
-	{
-		DebugBreak();
-	}
-	PArr[idx].flag = 0;
-
-	PArr[idx].TotalTime += Time.QuadPart;
-
-	//최소값이면 데이터 넣기
-	if (PArr[idx].Min[0] == -1)
-	{
-		PArr[idx].Min[0] = Time.QuadPart;
-	}
-	else if (PArr[idx].Min[1] == -1)
-	{
-		PArr[idx].Min[1] = Time.QuadPart;
-	}
-	else
-	{
-		if (PArr[idx].Min[0] > Time.QuadPart)
+		if (profile.IsRunning == 0)
 		{
-			PArr[idx].Min[0] = Time.QuadPart;
+			DebugBreak();
 		}
-		else if (PArr[idx].Min[1] > Time.QuadPart)
+
+		const __int64 elapsed = endTime.QuadPart - profile.StartTime.QuadPart;
+
+		profile.IsRunning = 0;
+		profile.TotalTime += elapsed;
+
+		if (profile.Min == -1 || elapsed < profile.Min)
 		{
-			PArr[idx].Min[1] = Time.QuadPart;
+			profile.Min = elapsed;
 		}
-	}
-	//최대값이면 데이터 넣기
-	if (PArr[idx].Max[0] < Time.QuadPart)
-	{
-		PArr[idx].Max[0] = Time.QuadPart;
-	}
-	else if (PArr[idx].Max[1] < Time.QuadPart)
-	{
-		PArr[idx].Max[1] = Time.QuadPart;
+
+		if (elapsed > profile.Max)
+		{
+			profile.Max = elapsed;
+		}
+
+		++profile.Call;
+		return;
 	}
 
-	PArr[idx].Call++;
-
-
+	DebugBreak(); // Begin 없이 End 호출
 }
 
 
 
 
 
-
-//Profiling 데이터 txt로 출력
-// Min 2개, Max 2개를 제외한 평균을 계산하므로
-// Call이 4 초과로 충분히 누적된 뒤에만 출력해야 한다.
-void ProfileDataOutText(void)
+struct ProfileSummary
 {
+	__int64 totalTime = 0;
+	__int64 minTime = -1;
+	__int64 maxTime = 0;
+	__int64 callCount = 0;
+};
 
-	char txtname[40];
-	char threadidtxt[11];
-	char txtnumstring[4];
-	char txttitle[16] = "_Profiling_";
+void ProfileDataOutText()
+{
+	std::vector<ThreadProfileState*> states;
 
 	{
-		std::lock_guard<std::mutex> lock(g_profilePointerMutex);
-		int size = ProfilePointer.size();
-		for (int i = 0; i < size; i++)
+		std::lock_guard<std::mutex> lock(g_profileRegistryMutex);
+
+		for (const auto& state : g_threadProfiles)
 		{
-			tlspointer box = ProfilePointer[i];
-			_itoa_s(box.id, threadidtxt, 10);
-			_itoa_s(txtnum, txtnumstring, 10);
+			states.push_back(state.get());
+		}
+	}
 
-			strcpy_s(txtname, threadidtxt);
-			strcat_s(txtname, txttitle);
-			strcat_s(txtname, txtnumstring);
-			strcat_s(txtname, ".txt");
+	std::map<std::string, ProfileSummary> summaries;
 
-			LARGE_INTEGER Freq;
-			QueryPerformanceFrequency(&Freq);
-			FILE* txtfile;
-			fopen_s(&txtfile, txtname, "wt");
-			if (txtfile != 0)
+	for (ThreadProfileState* state : states)
+	{
+		std::lock_guard<std::mutex> lock(state->mutex);
+
+		for (const stProfile& profile : state->profiles)
+		{
+			if (profile.Flag == 0 || profile.Call == 0)
 			{
-				fprintf(txtfile, "----------------------------------------------------------------------------------\n");
-				fprintf(txtfile, "       Name      |     Average    |      Min     |      Max     |      Call      \n");
-				fprintf(txtfile, "----------------------------------------------------------------------------------\n");
-				int idx = 0;
-				for (; idx < ARRMAX; idx++)
-				{
-					if (box.profilepointer[idx].Flag)
-					{
-						float avg = static_cast<float>(box.profilepointer[idx].TotalTime - box.profilepointer[idx].Max[0] - box.profilepointer[idx].Max[1] - box.profilepointer[idx].Min[0] - box.profilepointer[idx].Min[1]) / Freq.QuadPart * 1000000 / (box.profilepointer[idx].Call - 4);
-						fprintf(txtfile, "%17s|%14.4f㎲|%12.4f㎲|%12.4f㎲|%14d\n",
-							box.profilepointer[idx].Name, avg, static_cast<float>(box.profilepointer[idx].Min[0] + box.profilepointer[idx].Min[1]) * 1000000 / 2 / Freq.QuadPart,
-							static_cast<float>(box.profilepointer[idx].Max[0] + box.profilepointer[idx].Max[1]) * 1000000 / 2 / Freq.QuadPart,
-							static_cast<int>(box.profilepointer[idx].Call));
-					}
-					if (!box.profilepointer[idx].Flag)
-					{
-						fprintf(txtfile, "-------------------------------------------------------------------------------\n");
-						break;
-					}
-				}
+				continue;
+			}
 
-				fclose(txtfile);
+			ProfileSummary& summary = summaries[profile.Name];
+
+			summary.totalTime += profile.TotalTime;
+			summary.callCount += profile.Call;
+
+			if (summary.minTime == -1 || profile.Min < summary.minTime)
+			{
+				summary.minTime = profile.Min;
+			}
+
+			if (profile.Max > summary.maxTime)
+			{
+				summary.maxTime = profile.Max;
 			}
 		}
 	}
-	txtnum++;
-}
 
+	LARGE_INTEGER frequency;
+	QueryPerformanceFrequency(&frequency);
 
+	const long outputNumber = g_profileOutputNumber.fetch_add(1);
 
-// Min 2개, Max 2개를 제외한 평균을 계산하므로
-// Call이 4 초과로 충분히 누적된 뒤에만 출력해야 한다.
-void ProfileDataOutTextQ(void)
-{
-	char txtname[40];
-	char threadidtxt[11];
-	char txtnumstring[4];
-	char txttitle[16] = "_ProfilingQ_";
+	char fileName[64] = {};
+	sprintf_s(fileName, "Profiling_%ld.txt", outputNumber);
 
+	FILE* file = nullptr;
+	fopen_s(&file, fileName, "wt");
+	if (file == nullptr)
 	{
-		std::lock_guard<std::mutex> lock(g_profilePointerMutex);
-		int size = ProfilePointer.size();
-		for (int i = 0; i < size; i++)
-		{
-			tlspointer box = ProfilePointer[i];
-			_itoa_s(box.id, threadidtxt, 10);
-			_itoa_s(txtnumQ, txtnumstring, 10);
-
-			strcpy_s(txtname, threadidtxt);
-			strcat_s(txtname, txttitle);
-			strcat_s(txtname, txtnumstring);
-			strcat_s(txtname, ".txt");
-
-			FILE* txtfile;
-			fopen_s(&txtfile, txtname, "wt");
-			if (txtfile != 0)
-			{
-				fprintf(txtfile, "----------------------------------------------------------------------------------\n");
-				fprintf(txtfile, "       Name      |     Average    |      Min     |      Max     |      Call      \n");
-				fprintf(txtfile, "----------------------------------------------------------------------------------\n");
-				int idx = 0;
-				for (; idx < ARRMAX; idx++)
-				{
-					if (box.profilepointer[idx].Flag)
-					{
-						float avg = static_cast<float>(box.profilepointer[idx].TotalTime - box.profilepointer[idx].Max[0] - box.profilepointer[idx].Max[1] - box.profilepointer[idx].Min[0] - box.profilepointer[idx].Min[1]) / (box.profilepointer[idx].Call - 4);
-						fprintf(txtfile, "%17s|%14.4f㎲|%12.4f㎲|%12.4f㎲|%14d\n",
-							box.profilepointer[idx].Name, avg, static_cast<float>(box.profilepointer[idx].Min[0] + box.profilepointer[idx].Min[1]) * 1000000 / 2,
-							static_cast<float>(box.profilepointer[idx].Max[0] + box.profilepointer[idx].Max[1]) * 1000000 / 2,
-							static_cast<int>(box.profilepointer[idx].Call));
-					}
-					if (!box.profilepointer[idx].Flag)
-					{
-						fprintf(txtfile, "-------------------------------------------------------------------------------\n");
-						break;
-					}
-				}
-
-				fclose(txtfile);
-			}
-		}
-		txtnumQ++;
+		return;
 	}
-}
 
-//프로파일링된 데이터 초기화(태그 제외)
-void ProfileReset(void)
-{
+	fprintf(file, "Name|Average(us)|Min(us)|Max(us)|Call\n");
 
+	for (const auto& entry : summaries)
 	{
-		std::lock_guard<std::mutex> lock(g_profilePointerMutex);
-		int size = ProfilePointer.size();
+		const std::string& name = entry.first;
+		const ProfileSummary& summary = entry.second;
 
-		for (int i = 0; i < size; i++)
+		if (summary.callCount <= 4)
 		{
-			tlspointer box = ProfilePointer[i];
-
-			for (int j = 0; j < ARRMAX; j++)
-			{
-				if (box.profilepointer[j].Flag)
-				{
-					//box.profilepointer[j].Flag = false;
-					//box.profilepointer[j].StartTime.QuadPart = 0;
-					box.profilepointer[j].TotalTime = 0;
-					box.profilepointer[j].Min[0] = -1;
-					box.profilepointer[j].Min[1] = -1;
-					box.profilepointer[j].Max[0] = 0;
-					box.profilepointer[j].Max[1] = 0;
-					box.profilepointer[j].Call = 0;
-				}
-			}
+			continue;
 		}
+
+		const double averageUs =
+			static_cast<double>(summary.totalTime) * 1000000.0 /
+			static_cast<double>(frequency.QuadPart) /
+			static_cast<double>(summary.callCount);
+
+		const double minUs =
+			static_cast<double>(summary.minTime) * 1000000.0 /
+			static_cast<double>(frequency.QuadPart);
+
+		const double maxUs =
+			static_cast<double>(summary.maxTime) * 1000000.0 /
+			static_cast<double>(frequency.QuadPart);
+
+		fprintf(
+			file,
+			"%-28s | %14.3f | %14.3f | %14.3f | %12lld\n",
+			name.c_str(),
+			averageUs,
+			minUs,
+			maxUs,
+			summary.callCount);
 	}
+
+	fclose(file);
 }
+
