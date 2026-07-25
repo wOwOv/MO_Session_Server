@@ -426,7 +426,11 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 {
 	DBConnector db("DBInfo.txt");
-	db.Connect();
+	if (!db.Connect())
+	{
+		LOG(L"Database", LVERROR, L"DBThread failed to connect.");
+		return 0;
+	}
 	BattleDB battleDB(db);
 	FighterServer* server = (FighterServer*)arg;
 	while (true)
