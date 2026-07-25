@@ -452,7 +452,8 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 		{
 		case DBRequestType::SaveBattleResult:
 		{
-			if (!battleDB.SaveBattleResult(request._battleResult))
+			const DBSaveResult saveResult =	battleDB.SaveBattleResult(request._battleResult);
+			if (!saveResult.succeeded)
 			{
 				LOG(L"Database", LVSYSTEM,
 					L"Battle result DB save failed. match_id=%lld",

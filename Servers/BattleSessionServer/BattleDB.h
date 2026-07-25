@@ -2,13 +2,33 @@
 
 #include "FighterStructure.h"
 #include "DBConnector.h"
+#include <cstdint>
 
+enum class DBSaveStage : std::uint8_t
+{
+    None,
+    BeginTransaction,
+    BattleHistory,
+    PlayerBattleRecord,
+    PlayerBattleStat,
+    Commit,
+};
+
+struct DBSaveResult
+{
+    bool succeeded = false;
+    DBSaveStage stage = DBSaveStage::None;
+    DBErrorInfo error{};
+    bool rollbackAttempted = false;
+    bool rollbackSucceeded = false;
+    bool commitOutcomeUnknown = false;
+};
 
 class BattleDB
 {
 public:
 	explicit BattleDB(DBConnector& db);
-	bool SaveBattleResult(const BattleResult& result);
+    DBSaveResult SaveBattleResult(const BattleResult& result);
 
 private:
 	bool InsertBattleHistory(const BattleResult& result);
