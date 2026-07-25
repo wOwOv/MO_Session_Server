@@ -7,14 +7,19 @@
 #include <Parser.h>
 #include <strsafe.h>
 #include <windows.h>
+#include <mysqld_error.h>
 
 namespace
 {
-	void LogMysqlError(const wchar_t* prefix, const char* errorText)
+	void LogMysqlError(const wchar_t* prefix, MYSQL* connection)
 	{
+		const unsigned int mysqlError = mysql_errno(connection);
+		const char* errorText = mysql_error(connection);
+
 		wchar_t werror[1024] = {};
 		MultiByteToWideChar(CP_ACP, 0, errorText, -1, werror, _countof(werror));
-		LOG(L"Database", LVSYSTEM, L"%s : %s", prefix, werror);
+
+		LOG(L"Database", LVERROR, L"%s. mysql_error=%u message=%s", prefix, mysqlError, werror);
 	}
 }
 
@@ -34,13 +39,21 @@ bool DBConnector::Connect()
 	mysql_init(&_conn);
 	
 	_connection = mysql_real_connect(&_conn, _host, _user, _passwd, _db, _port, (char*)NULL, 0);
-	_queryStat = mysql_set_server_option(_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 	if (_connection == nullptr)
 	{
-		// mysql_errno(&_MySQL);
-		LogMysqlError(L"Mysql connection error", mysql_error(&_conn));
+		SetLastMysqlError(mysql_errno(&_conn));
+		LogMysqlError(L"Mysql connection error", &_conn);
 		return false;
 	}
+	_queryStat = mysql_set_server_option(_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
+	if (_queryStat != 0)
+	{
+		SetLastMysqlError(mysql_errno(_connection));
+		LogMysqlError(L"Mysql multi statement option error", _connection);
+		return false;
+	}
+
+	ClearLastError();
 	return true;
 }
 
@@ -51,22 +64,51 @@ void DBConnector::Disconnect()
 
 bool DBConnector::BeginTransaction()
 {
-	return mysql_query(_connection, "BEGIN") == 0;
+	ClearLastError();
+
+	if (mysql_query(_connection, "BEGIN") != 0)
+	{
+		SetLastMysqlError(mysql_errno(_connection));
+		return false;
+	}
+
+	return true;
 }
 
 bool DBConnector::Commit()
 {
-	return mysql_query(_connection, "COMMIT") == 0;
+	ClearLastError();
+
+	if (mysql_query(_connection, "COMMIT") != 0)
+	{
+		SetLastMysqlError(mysql_errno(_connection));
+		return false;
+	}
+
+	return true;
 }
 
 bool DBConnector::Rollback()
 {
-	return mysql_query(_connection, "ROLLBACK") == 0;
+	ClearLastError();
+
+	if (mysql_query(_connection, "ROLLBACK") != 0)
+	{
+		SetLastMysqlError(mysql_errno(_connection));
+		return false;
+	}
+
+	return true;
 }
 
 void DBConnector::GetQueryResult(MYSQL_RES** result)
 {
 	*result = _sqlResult;
+}
+
+DBErrorInfo DBConnector::GetLastError() const
+{
+	return _lastError;
 }
 
 bool DBConnector::ExecuteSaveQuery(const WCHAR* wquery)
@@ -75,13 +117,16 @@ bool DBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 
 	WideCharToMultiByte(CP_UTF8, 0, wquery, -1, cquery, 4096, NULL, NULL);
 
+	ClearLastError();
+
 	ULONGLONG start = GetTickCount64();
 	_queryStat = mysql_query(_connection, cquery);
 	ULONGLONG time = GetTickCount64() - start;
 	if (_queryStat != 0)
 	{
-		LogMysqlError(L"Mysql query error", mysql_error(&_conn));
+		SetLastMysqlError(mysql_errno(_connection));
 
+		LogMysqlError(L"Mysql query error", _connection);
 		return false;
 	}
 
@@ -106,12 +151,16 @@ bool DBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 
 	WideCharToMultiByte(CP_UTF8, 0, wquery, -1, cquery, 4096, NULL, NULL);
 
+	ClearLastError();
+
 	ULONGLONG start = GetTickCount64();
 	_queryStat = mysql_query(_connection, cquery);
 	ULONGLONG time = GetTickCount64() - start;
 	if (_queryStat != 0)
 	{
-		LogMysqlError(L"Mysql query error", mysql_error(&_conn));
+		SetLastMysqlError(mysql_errno(_connection));
+
+		LogMysqlError(L"Mysql query error", _connection);
 		return false;
 	}
 
@@ -138,6 +187,48 @@ void DBConnector::Parsing(const char* txtname)
 
 	parser.GetValue("DB_INFO", "port", (int*)&_port);
 	parser.GetValue("DB_INFO", "limitTime", (int*)&_limitTime);
+}
+
+void DBConnector::ClearLastError()
+{
+	_lastError = {};
+}
+
+void DBConnector::SetLastMysqlError(unsigned int mysqlError)
+{
+	switch (mysqlError)
+	{
+	case ER_DUP_ENTRY:
+	{
+		SetLastError(DBErrorCategory::DuplicateKey, mysqlError);
+		break;
+	}
+	case ER_LOCK_DEADLOCK:
+	{
+		SetLastError(DBErrorCategory::Deadlock, mysqlError);
+		break;
+	}
+	case ER_LOCK_WAIT_TIMEOUT:
+	{
+		SetLastError(DBErrorCategory::LockTimeout, mysqlError);
+		break;
+	}
+	case CR_SERVER_GONE_ERROR:
+	case CR_SERVER_LOST:
+		SetLastError(DBErrorCategory::ConnectionLost, mysqlError);
+		break;
+	default:
+	{
+		SetLastError(DBErrorCategory::Unknown, mysqlError);
+		break;
+	}
+	}
+}
+
+void DBConnector::SetLastError(DBErrorCategory category, unsigned int mysqlError)
+{
+	_lastError.category = category;
+	_lastError.mysqlError = mysqlError;
 }
 
 TLSDBConnector::TLSDBConnector(const char* txtname)
@@ -171,7 +262,7 @@ bool TLSDBConnector::Connect()
 	if (sqldata->_connection == NULL)
 	{
 		// mysql_errno(&_MySQL);
-		LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
+		LogMysqlError(L"Mysql connection error", &sqldata->_conn);
 		return false;
 	}
 	return true;
@@ -196,7 +287,7 @@ bool TLSDBConnector::BeginTransaction()
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", &sqldata->_conn);
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -219,7 +310,7 @@ bool TLSDBConnector::Commit()
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", &sqldata->_conn);
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -242,7 +333,7 @@ bool TLSDBConnector::Rollback()
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", &sqldata->_conn);
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -265,7 +356,7 @@ bool TLSDBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", &sqldata->_conn);
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -280,7 +371,7 @@ bool TLSDBConnector::ExecuteSaveQuery(const WCHAR* wquery)
 	ULONGLONG time = GetTickCount64() - start;
 	if (sqldata->_queryStat != 0)
 	{
-		LogMysqlError(L"Mysql query error", mysql_error(&sqldata->_conn));
+		LogMysqlError(L"Mysql query error", &sqldata->_conn);
 		return false;
 	}
 
@@ -312,7 +403,7 @@ bool TLSDBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 		sqldata->_queryStat = mysql_set_server_option(sqldata->_connection, MYSQL_OPTION_MULTI_STATEMENTS_ON);
 		if (sqldata->_connection == NULL)
 		{
-			LogMysqlError(L"Mysql connection error", mysql_error(&sqldata->_conn));
+			LogMysqlError(L"Mysql connection error", &sqldata->_conn);
 			return false;
 		}
 		TlsSetValue(_tlsIndex, (LPVOID)sqldata);
@@ -327,7 +418,7 @@ bool TLSDBConnector::ExecuteSelectQuery(const WCHAR* wquery)
 	ULONGLONG time = GetTickCount64() - start;
 	if (sqldata->_queryStat != 0)
 	{
-		LogMysqlError(L"Mysql query error", mysql_error(&sqldata->_conn));
+		LogMysqlError(L"Mysql query error", &sqldata->_conn);
 		return false;
 	}
 
