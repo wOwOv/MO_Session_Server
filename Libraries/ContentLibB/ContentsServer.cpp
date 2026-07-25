@@ -10,7 +10,6 @@
 #include <conio.h>
 #include "SRWLockGuard.h"
 #include <vector>
-#include "Profiler.h"
 
 ContentsServer::ContentsServer(ServerType type) : _type(type)
 {
@@ -316,12 +315,9 @@ unsigned long ContentsServer::GetContentsLogic(__int32 contentsnum)
 
 void ContentsServer::RegisterContents(__int32 contentsnum, const std::shared_ptr<Contents>& contents)
 {
-	PRO_BEGIN("Register_Total");
-	PRO_BEGIN("Register_MapWait");
 	{
 		SRWExclusiveLockGuard guard(_mapKey);
-		PRO_END("Register_MapWait");
-		PRO_BEGIN("Register_MapHold");
+
 		_contentsMap.insert(std::make_pair(contentsnum, contents));
 		contents->_mServer = this;
 		if (contents->_proxy != nullptr)
@@ -332,23 +328,18 @@ void ContentsServer::RegisterContents(__int32 contentsnum, const std::shared_ptr
 		{
 			contents->_stub->ConnectServer(this);
 		}
-		PRO_END("Register_MapHold");
-	}
 
-	PRO_END("Register_Total");
+	}
 
 }
 
 void ContentsServer::DeregisterContents(__int32 contentsnum)
 {
-	PRO_BEGIN("Deregister_Total");
-	PRO_BEGIN("Deregister_MapWait");
+
 	std::shared_ptr<Contents> removedContents;
 
 	{
 		SRWExclusiveLockGuard guard(_mapKey);
-		PRO_END("Deregister_MapWait");
-		PRO_BEGIN("Deregister_MapHold");
 
 		const auto it = _contentsMap.find(contentsnum);
 		if (it != _contentsMap.end())
@@ -357,9 +348,9 @@ void ContentsServer::DeregisterContents(__int32 contentsnum)
 			_contentsMap.erase(it);
 		}
 
-		PRO_END("Deregister_MapHold");
+
 	}
-	PRO_END("Deregister_Total");
+
 }
 
 void ContentsServer::SetDefaultContents(__int32 contentsnum)
@@ -780,13 +771,13 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 			std::shared_ptr<Contents> contents;
 			{
 				SRWSharedLockGuard mapGuard(server->_mapKey);
-				PRO_BEGIN("Worker_Enter_MapHold");
+
 				const auto it = server->_contentsMap.find(cbTransferred);
 				if (it != server->_contentsMap.end())
 				{
 					contents = it->second;
 				}
-				PRO_END("Worker_Enter_MapHold");
+
 			}
 			if (contents != nullptr)
 			{
@@ -803,13 +794,13 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 			std::shared_ptr<Contents> contents;
 			{
 				SRWSharedLockGuard mapGuard(server->_mapKey);
-				PRO_BEGIN("Worker_Leave_MapHold");
+
 				const auto it = server->_contentsMap.find(cbTransferred);
 				if (it != server->_contentsMap.end())
 				{
 					contents = it->second;
 				}
-				PRO_END("Worker_Leave_MapHold");
+
 			}
 			if (contents != nullptr)
 			{
@@ -827,13 +818,13 @@ unsigned __stdcall ContentsServer::WorkerThread(LPVOID arg)
 			std::shared_ptr<Contents> contents;
 			{
 				SRWSharedLockGuard mapGuard(server->_mapKey);
-				PRO_BEGIN("Worker_Update_MapHold");
+
 				const auto it = server->_contentsMap.find(cbTransferred);
 				if (it != server->_contentsMap.end())
 				{
 					contents = it->second;
 				}
-				PRO_END("Worker_Update_MapHold");
+
 			}
 			if (contents != nullptr)
 			{
@@ -1206,11 +1197,10 @@ unsigned __stdcall ContentsServer::FrameScheduler(LPVOID arg)
 
 		frameCount += 10;
 		contentsNumList.clear();
-		PRO_BEGIN("Scheduler_MapWait");
+
 		{
 			SRWSharedLockGuard mapGuard(coreserver->_mapKey);
-			PRO_END("Scheduler_MapWait");
-			PRO_BEGIN("Scheduler_MapHold");
+
 			for (const auto& entry : coreserver->_contentsMap)
 			{
 				if (entry.second->_frame > 0 &&
@@ -1219,7 +1209,7 @@ unsigned __stdcall ContentsServer::FrameScheduler(LPVOID arg)
 					contentsNumList.push_back(entry.first);
 				}
 			}
-			PRO_END("Scheduler_MapHold");
+
 		}
 
 		// map lock을 해제한 다음 IOCP에 등록
