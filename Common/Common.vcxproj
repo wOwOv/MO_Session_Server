@@ -151,6 +151,7 @@
     <ClInclude Include="MonitorProtocol.h" />
     <ClInclude Include="Parser.h" />
     <ClInclude Include="PDProducer.h" />
+    <ClInclude Include="Profiler.h" />
     <ClInclude Include="ProxyTraceMemory.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="SerialBuffer.h" />
@@ -164,6 +165,7 @@
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Parser.cpp" />
     <ClCompile Include="PDProducer.cpp" />
+    <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="ProxyTraceMemory.cpp" />
     <ClCompile Include="SerialBuffer.cpp" />
     <ClCompile Include="TLS\DBConnector.cpp" />

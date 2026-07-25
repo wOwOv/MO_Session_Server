@@ -106,7 +106,7 @@ private:
 	std::atomic<ServerState> _state= ServerState::SERVER_CREATED;
 
 	//MatchContents
-	std::unique_ptr<MatchContents> _matchContents;
+	std::shared_ptr<MatchContents> _matchContents;
 
 	//제어스레드
 	std::thread _CtrlThread;

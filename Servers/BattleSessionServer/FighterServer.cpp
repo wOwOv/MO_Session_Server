@@ -6,14 +6,15 @@
 #include "BattleMonitorMP.h"
 
 
+
 FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
 {
 	_ctrlThreadRun.store(true);
 	_CtrlThread = std::thread(CtrlThread, this);
 	_dbThreadRun.store(true);
 	_DBThread = std::thread(DBThread, this);
-	_matchContents = std::make_unique<MatchContents>();
-	RegisterContents(MATCH, _matchContents.get());
+	_matchContents = std::make_shared<MatchContents>();
+	RegisterContents(MATCH, _matchContents);
 	SetDefaultContents(MATCH);
 	_pdProducer = std::make_unique<PcPDProducer>();
 	_monitorClient = std::make_unique<MonitorClient>(217);
@@ -305,6 +306,7 @@ void FighterServer::OtherServerControl(int controlKey)
 	{
 		_shutDown = true;
 	}
+
 }
 
 bool FighterServer::IsShutDownRequested()
@@ -469,7 +471,14 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 
 void FighterServer::HandleFightAlloc(Control& control, __int32& nextContentsNum)
 {
-	FightContents* contents = _fightPool.Alloc();
+	// º¯°æ
+	std::shared_ptr<FightContents> contents(
+		_fightPool.Alloc(),
+		[this](FightContents* fight)
+		{
+			_fightPool.Free(fight);
+		});
+
 	contents->Clear();
 	contents->Init(nextContentsNum, CreateMatchID(), control._group);
 
@@ -492,7 +501,6 @@ void FighterServer::HandleFightFree(Control& control)
 {
 	FightContents* fight = static_cast<FightContents*>(control._contents);
 	DeregisterContents(fight->GetContentsNum());
-	_fightPool.Free(fight);
 }
 
 void FighterServer::HandleMatchDeregister()
