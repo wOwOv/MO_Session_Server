@@ -137,3 +137,59 @@ __forceinline void MPGameFightFPSMax(CPacket* packet, int datavalue, int timesta
 	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_FIGHT_FPS_MAX;
 	*packet << type << datatype << datavalue << timestamp;
 }
+
+__forceinline void MPGameDBSuccess(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_SUCCESS_TOTAL;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameDBFailure(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_FAILURE_TOTAL;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameDBDuplicateKey(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_DUPLICATEKEY;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameDBDeadlock(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_DEADLOCK;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameDBLockTimeout(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_LOCKTIMEOUT;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameDBConnectionLost(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_CONNECTIONLOST;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameDBQueryFormatError(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_QUERYFORMATERROR;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameDBUnknownError(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_UNKNOWNERROR;
+	*packet << type << datatype << datavalue << timestamp;
+}
