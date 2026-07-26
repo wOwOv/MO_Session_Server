@@ -148,7 +148,7 @@ void FighterServer::OnSecond()
 	CPacket sendmsg;
 	MPGameSnd(&sendmsg, data, timestamp);
 
-	data = _dbSaveCount;
+	data = _dbSaveCount.exchange(0);
 	CPacket dbtpsmsg;
 	MPGameDBTPS(&dbtpsmsg, data, timestamp);
 
@@ -156,11 +156,11 @@ void FighterServer::OnSecond()
 	CPacket dbqmsg;
 	MPGameDBMsg(&dbqmsg, data, timestamp);
 
-	data = _fightAllocCount;
+	data = _fightAllocCount.exchange(0);
 	CPacket fightallocmsg;
 	MPGameAlloc(&fightallocmsg, data, timestamp);
 
-	data = _fightFreeCount;
+	data = _fightFreeCount.exchange(0);
 	CPacket fightfreemsg;
 	MPGameFree(&fightfreemsg, data, timestamp);
 
@@ -188,6 +188,39 @@ void FighterServer::OnSecond()
 	CPacket fpsmaxmsg;
 	MPGameFightFPSMax(&fpsmaxmsg, data, timestamp);
 
+	data = _dbSaveSuccessTotal.load();
+	CPacket successmsg;
+	MPGameDBSuccess(&successmsg, data, timestamp);
+
+	data = _dbSaveFailureTotal.load();
+	CPacket failmsg;
+	MPGameDBFailure(&failmsg, data, timestamp);
+
+	data = _dbDuplicateKeyTotal.load();
+	CPacket dupmsg;
+	MPGameDBDuplicateKey(&dupmsg, data, timestamp);
+
+	data = _dbDeadlockTotal.load();
+	CPacket dlockmsg;
+	MPGameDBDeadlock(&dlockmsg, data, timestamp);
+
+	data = _dbLockTimeoutTotal.load();
+	CPacket timeoutmsg;
+	MPGameDBLockTimeout(&timeoutmsg, data, timestamp);
+
+	data = _dbConnectionLostTotal.load();
+	CPacket clostmsg;
+	MPGameDBConnectionLost(&clostmsg, data, timestamp);
+
+	data = _dbQueryFormatErrorTotal.load();
+	CPacket qerrormsg;
+	MPGameDBQueryFormatError(&qerrormsg, data, timestamp);
+	
+	data = _dbUnknownErrorTotal.load();
+	CPacket unknownmsg;
+	MPGameDBUnknownError(&unknownmsg, data, timestamp);
+
+
 	if (_monitorClient.get() != nullptr)
 	{
 		_monitorClient.get()->SendPacket(runmsg);
@@ -209,11 +242,15 @@ void FighterServer::OnSecond()
 		_monitorClient.get()->SendPacket(fpsavgmsg);
 		_monitorClient.get()->SendPacket(fpsminmsg);
 		_monitorClient.get()->SendPacket(fpsmaxmsg);
+		_monitorClient.get()->SendPacket(successmsg);
+		_monitorClient.get()->SendPacket(failmsg);
+		_monitorClient.get()->SendPacket(dupmsg);
+		_monitorClient.get()->SendPacket(dlockmsg);
+		_monitorClient.get()->SendPacket(timeoutmsg);
+		_monitorClient.get()->SendPacket(clostmsg);
+		_monitorClient.get()->SendPacket(qerrormsg);
+		_monitorClient.get()->SendPacket(unknownmsg);
 	}
-
-	_fightAllocCount = 0;
-	_fightFreeCount = 0;
-	_dbSaveCount = 0;
 
 }
 
@@ -296,8 +333,11 @@ void FighterServer::ShowServerInfo()
 	}
 	}
 
-	printf("FightResourceCapacity: %d\nFightResourceUsing: %d\nPlayerPoolCapacity: %d\nPlayerPoolUsing: %d\nControlPoolCapacity: %d\nControlPoolUsing: %d\nPlayer: %d",
+	printf("FightResourceCapacity: %d\nFightResourceUsing: %d\nPlayerPoolCapacity: %d\nPlayerPoolUsing: %d\nControlPoolCapacity: %d\nControlPoolUsing: %d\nPlayer: %d\n",
 		GetFightPoolCapacity(),GetFightPoolUsingCount(),GetPlayerPoolCapacity(),GetPlayerPoolUsingCount(),GetControlPoolCapacity(),GetControlPoolUsingCount(),GetPlayerCount());
+	printf("DBSuccessTotal: %llu      DBFailureTotal: %llu\nDBDuplicateKey: %llu      DBDeadlock: %llu\nDBLockTimeout: %llu      DBConnectionLost: %llu\nDBQueryFormatError: %llu      DBUnknownError: %llu\n\n",
+		_dbSaveSuccessTotal.load(), _dbSaveFailureTotal.load(), _dbDuplicateKeyTotal.load(), _dbDeadlockTotal.load(),
+		_dbLockTimeoutTotal.load(), _dbConnectionLostTotal.load(), _dbQueryFormatErrorTotal.load(), _dbUnknownErrorTotal.load());
 }
 
 void FighterServer::OtherServerControl(int controlKey)
@@ -403,12 +443,12 @@ unsigned __stdcall FighterServer::CtrlThread(LPVOID arg)		//FightContents´Â Ctrl
 			{
 			case CONTROLTYPE::FIGHTALLOC:
 				server->HandleFightAlloc(*control, cnum);
-				server->_fightAllocCount++;
+				server->_fightAllocCount.fetch_add(1);
 				break;
 
 			case CONTROLTYPE::FIGHTFREE:
 				server->HandleFightFree(*control);
-				server->_fightFreeCount++;
+				server->_fightFreeCount.fetch_add(1);
 				break;
 
 			case CONTROLTYPE::MATCHDEREGISTER:
@@ -452,13 +492,15 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 		{
 		case DBRequestType::SaveBattleResult:
 		{
-			if (!battleDB.SaveBattleResult(request._battleResult))
+			const DBSaveResult saveResult =	battleDB.SaveBattleResult(request._battleResult);
+			server->RecordDBSaveCounters(saveResult);
+			if (!saveResult.succeeded)
 			{
 				LOG(L"Database", LVSYSTEM,
 					L"Battle result DB save failed. match_id=%lld",
 					request._battleResult._matchID);
 			}
-			server->_dbSaveCount++;
+
 			break;
 		}
 
@@ -560,4 +602,46 @@ bool FighterServer::WaitAndPopDBRequest(DBRequest& outrequest)
 	_dbQ.pop();
 
 	return true;
+}
+
+void FighterServer::RecordDBSaveCounters(const DBSaveResult& saveResult)
+{
+	_dbSaveCount.fetch_add(1);
+
+	if (saveResult.succeeded)
+	{
+		_dbSaveSuccessTotal.fetch_add(1);
+		return;
+	}
+
+	_dbSaveFailureTotal.fetch_add(1);
+
+	switch (saveResult.error.category)
+	{
+	case DBErrorCategory::DuplicateKey:
+		_dbDuplicateKeyTotal.fetch_add(1);
+		break;
+
+	case DBErrorCategory::Deadlock:
+		_dbDeadlockTotal.fetch_add(1);
+		break;
+
+	case DBErrorCategory::LockTimeout:
+		_dbLockTimeoutTotal.fetch_add(1);
+		break;
+
+	case DBErrorCategory::ConnectionLost:
+		_dbConnectionLostTotal.fetch_add(1);
+		break;
+
+	case DBErrorCategory::QueryFormatError:
+		_dbQueryFormatErrorTotal.fetch_add(1);
+		break;
+
+	case DBErrorCategory::None:
+	case DBErrorCategory::Unknown:
+	default:
+		_dbUnknownErrorTotal.fetch_add(1);
+		break;
+	}
 }

@@ -76,7 +76,7 @@ namespace
 BattleDB::BattleDB(DBConnector& db):_db(db)
 {}
 
-bool BattleDB::SaveBattleResult(const BattleResult & result)
+DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 {
 	if (!_db.BeginTransaction())
 	{
@@ -85,7 +85,11 @@ bool BattleDB::SaveBattleResult(const BattleResult & result)
 		LOG(L"Database", LVERROR,L"SaveBattleResult failed. match_id=%lld stage=Begin category=%s mysql_error=%u",
 			result._matchID,GetDBErrorCategoryName(error.category),	error.mysqlError);
 
-		return false;
+		DBSaveResult saveResult;
+		saveResult.succeeded = false;
+		saveResult.stage = DBSaveStage::BeginTransaction;
+		saveResult.error = error;
+		return saveResult;
 	}
 
 	if (!InsertBattleHistory(result))
@@ -96,9 +100,14 @@ bool BattleDB::SaveBattleResult(const BattleResult & result)
 		const DBErrorInfo rollbackError = _db.GetLastError();
 
 		LOG(L"Database", LVERROR,L"SaveBattleResult failed. match_id=%lld stage=BattleHistory category=%s mysql_error=%u rollback=%d rollback_mysql_error=%u",
-			result._matchID,GetDBErrorCategoryName(originalError.category),originalError.mysqlError,rollbackSucceeded,rollbackSucceeded ? 0 : rollbackError.mysqlError);
+			result._matchID,GetDBErrorCategoryName(originalError.category),originalError.mysqlError,rollbackSucceeded,rollbackSucceeded ? 0u : rollbackError.mysqlError);
 
-		return false;
+		DBSaveResult saveResult;
+		saveResult.stage = DBSaveStage::BattleHistory;
+		saveResult.error = originalError;
+		saveResult.rollbackAttempted = true;
+		saveResult.rollbackSucceeded = rollbackSucceeded;
+		return saveResult;
 	}
 
 	if (!InsertPlayerBattleRecords(result))
@@ -109,9 +118,14 @@ bool BattleDB::SaveBattleResult(const BattleResult & result)
 		const DBErrorInfo rollbackError = _db.GetLastError();
 
 		LOG(L"Database", LVERROR, L"SaveBattleResult failed. match_id=%lld stage=PlayerBattleRecord category=%s mysql_error=%u rollback=%d rollback_mysql_error=%u",
-			result._matchID, GetDBErrorCategoryName(originalError.category), originalError.mysqlError, rollbackSucceeded, rollbackSucceeded ? 0 : rollbackError.mysqlError);
-
-		return false;
+			result._matchID, GetDBErrorCategoryName(originalError.category), originalError.mysqlError, rollbackSucceeded, rollbackSucceeded ? 0u : rollbackError.mysqlError);
+		
+		DBSaveResult saveResult;
+		saveResult.stage = DBSaveStage::PlayerBattleRecord;
+		saveResult.error = originalError;
+		saveResult.rollbackAttempted = true;
+		saveResult.rollbackSucceeded = rollbackSucceeded;
+		return saveResult;
 	}
 
 	if (!UpsertPlayerBattleStats(result))
@@ -122,9 +136,14 @@ bool BattleDB::SaveBattleResult(const BattleResult & result)
 		const DBErrorInfo rollbackError = _db.GetLastError();
 
 		LOG(L"Database", LVERROR, L"SaveBattleResult failed. match_id=%lld stage=PlayerBattleStat category=%s mysql_error=%u rollback=%d rollback_mysql_error=%u",
-			result._matchID, GetDBErrorCategoryName(originalError.category), originalError.mysqlError, rollbackSucceeded, rollbackSucceeded ? 0 : rollbackError.mysqlError);
+			result._matchID, GetDBErrorCategoryName(originalError.category), originalError.mysqlError, rollbackSucceeded, rollbackSucceeded ? 0u : rollbackError.mysqlError);
 
-		return false;
+		DBSaveResult saveResult;
+		saveResult.stage = DBSaveStage::PlayerBattleStat;
+		saveResult.error = originalError;
+		saveResult.rollbackAttempted = true;
+		saveResult.rollbackSucceeded = rollbackSucceeded;
+		return saveResult;
 	}
 
 	if (!_db.Commit())
@@ -140,13 +159,22 @@ bool BattleDB::SaveBattleResult(const BattleResult & result)
 		LOG(L"Database", LVERROR,L"SaveBattleResult commit failed. match_id=%lld category=%s mysql_error=%u rollback=%d rollback_mysql_error=%u commit_outcome=%s",
 			result._matchID,GetDBErrorCategoryName(commitError.category),commitError.mysqlError,rollbackSucceeded,rollbackSucceeded ? 0u : rollbackError.mysqlError,commitOutcome);
 
-		return false;
+		DBSaveResult saveResult;
+		saveResult.succeeded = false;
+		saveResult.stage = DBSaveStage::Commit;
+		saveResult.error = commitError;
+		saveResult.rollbackAttempted = true;
+		saveResult.rollbackSucceeded = rollbackSucceeded;
+		saveResult.commitOutcomeUnknown = commitOutcomeUnknown;
+		return saveResult;
 	}
 
 	LOG(L"Database", LVSYSTEM, L"SaveBattleResult success. match_id=%llu",
 		result._matchID);
 
-	return true;
+	DBSaveResult saveResult;
+	saveResult.succeeded = true;
+	return saveResult;
 }
 
 bool BattleDB::InsertBattleHistory(const BattleResult& result)

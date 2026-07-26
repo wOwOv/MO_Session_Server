@@ -13,6 +13,10 @@
 #include "MatchIDGenerator.h"
 #include "MonitorClient.h"
 #include "PDProducer.h"
+#include <atomic>
+#include <cstdint>
+
+struct DBSaveResult;
 
 class FighterServer:public ContentsServer
 {
@@ -85,6 +89,7 @@ private:
 private:
 	void PushDBRequest(DBRequest request);
 	bool WaitAndPopDBRequest(DBRequest& outrequest);
+	void RecordDBSaveCounters(const DBSaveResult& saveResult);
 
 private:
 	struct SockAddrInHash {
@@ -139,10 +144,20 @@ private:
 	std::unique_ptr<MonitorClient> _monitorClient;
 	std::unique_ptr<PcPDProducer> _pdProducer;
 
-	//모니터링용
-	long _fightAllocCount = 0;
-	long _fightFreeCount = 0;
-	long _dbSaveCount = 0;
+	//모니터링용 TPS카운트
+	std::atomic<std::uint32_t> _fightAllocCount = 0;
+	std::atomic<std::uint32_t>  _fightFreeCount = 0;
+	std::atomic<std::uint32_t>  _dbSaveCount = 0;
 
+	//DB누적카운트
+	std::atomic<std::uint64_t> _dbSaveSuccessTotal = 0;
+	std::atomic<std::uint64_t> _dbSaveFailureTotal = 0;
+
+	std::atomic<std::uint64_t> _dbDuplicateKeyTotal = 0;
+	std::atomic<std::uint64_t> _dbDeadlockTotal = 0;
+	std::atomic<std::uint64_t> _dbLockTimeoutTotal = 0;
+	std::atomic<std::uint64_t> _dbConnectionLostTotal = 0;
+	std::atomic<std::uint64_t> _dbQueryFormatErrorTotal = 0;
+	std::atomic<std::uint64_t> _dbUnknownErrorTotal = 0;
 };
 

@@ -148,15 +148,24 @@ enum en_PACKET_SS_MONITOR_DATA_UPDATE
 	dfMONITOR_DATA_TYPE_GAME_FIGHT_FPS_AVG = 26,			//게임서버 FightContents 평균 FPS
 	dfMONITOR_DATA_TYPE_GAME_FIGHT_FPS_MIN = 27,			//게임서버 FightContents 최소 FPS
 	dfMONITOR_DATA_TYPE_GAME_FIGHT_FPS_MAX = 28,			//게임서버 FightContents 최대 FPS
+	dfMONITOR_DATA_TYPE_GAME_DB_SUCCESS_TOTAL=29,			//게임서버 DB 저장 성공 누적 횟수
+	dfMONITOR_DATA_TYPE_GAME_DB_FAILURE_TOTAL=30,			//게임서버 DB 저장 실패 누적 횟수
+	dfMONITOR_DATA_TYPE_GAME_DB_DUPLICATEKEY=31,			//게임서버 DB duplicate key 실패 누적 횟수
+	dfMONITOR_DATA_TYPE_GAME_DB_DEADLOCK=32,				//게임서버 DB Deadlock 실패 누적 횟수
+	dfMONITOR_DATA_TYPE_GAME_DB_LOCKTIMEOUT=33,				//게임서버 DB LockTimeout실패 누적 횟수
+	dfMONITOR_DATA_TYPE_GAME_DB_CONNECTIONLOST=34,			//게임서버 DB ConnectionLost 실패 누적 횟수
+	dfMONITOR_DATA_TYPE_GAME_DB_QUERYFORMATERROR=35,		//게임서버 DB QueryFormatError 실패 누적 횟수
+	dfMONITOR_DATA_TYPE_GAME_DB_UNKNOWNERROR=36,			//게임서버 DB Unknown Error 실패 누적 횟수
 
-	dfMONITOR_DATA_TYPE_CHAT_SERVER_RUN = 30,		// 채팅서버 ChatServer 실행 여부 ON / OFF
-	dfMONITOR_DATA_TYPE_CHAT_SERVER_CPU = 31,		// 채팅서버 ChatServer CPU 사용률
-	dfMONITOR_DATA_TYPE_CHAT_SERVER_MEM = 32,		// 채팅서버 ChatServer 메모리 사용 MByte
-	dfMONITOR_DATA_TYPE_CHAT_SESSION = 33,		// 채팅서버 세션 수 (컨넥션 수)
-	dfMONITOR_DATA_TYPE_CHAT_PLAYER = 34,		// 채팅서버 인증성공 사용자 수 (실제 접속자)
-	dfMONITOR_DATA_TYPE_CHAT_UPDATE_TPS = 35,		// 채팅서버 UPDATE 스레드 초당 초리 횟수
-	dfMONITOR_DATA_TYPE_CHAT_PACKET_POOL = 36,		// 채팅서버 패킷풀 사용량
-	dfMONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL = 37,		// 채팅서버 UPDATE MSG 풀 사용량
+
+	dfMONITOR_DATA_TYPE_CHAT_SERVER_RUN = 50,		// 채팅서버 ChatServer 실행 여부 ON / OFF
+	dfMONITOR_DATA_TYPE_CHAT_SERVER_CPU = 51,		// 채팅서버 ChatServer CPU 사용률
+	dfMONITOR_DATA_TYPE_CHAT_SERVER_MEM = 52,		// 채팅서버 ChatServer 메모리 사용 MByte
+	dfMONITOR_DATA_TYPE_CHAT_SESSION = 53,		// 채팅서버 세션 수 (컨넥션 수)
+	dfMONITOR_DATA_TYPE_CHAT_PLAYER = 54,		// 채팅서버 인증성공 사용자 수 (실제 접속자)
+	dfMONITOR_DATA_TYPE_CHAT_UPDATE_TPS = 55,		// 채팅서버 UPDATE 스레드 초당 초리 횟수
+	dfMONITOR_DATA_TYPE_CHAT_PACKET_POOL = 56,		// 채팅서버 패킷풀 사용량
+	dfMONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL = 57,		// 채팅서버 UPDATE MSG 풀 사용량
 
 
 	dfMONITOR_DATA_TYPE_MONITOR_CPU_TOTAL = 40,		// 서버컴퓨터 CPU 전체 사용률
