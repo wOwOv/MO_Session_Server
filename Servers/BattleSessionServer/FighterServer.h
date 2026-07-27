@@ -68,6 +68,7 @@ public:
 	int GetPlayerPoolUsingCount();
 	int GetControlPoolCapacity();
 	int GetControlPoolUsingCount();
+	std::size_t GetDBQueueSize();
 
 	__int64 CreateMatchID();
 
@@ -159,5 +160,12 @@ private:
 	std::atomic<std::uint64_t> _dbConnectionLostTotal = 0;
 	std::atomic<std::uint64_t> _dbQueryFormatErrorTotal = 0;
 	std::atomic<std::uint64_t> _dbUnknownErrorTotal = 0;
+
+	//DB누적 시간
+	void RecordDBQueueWait(std::uint64_t waitUs);
+
+	std::atomic<std::uint64_t> _dbQueueWaitTotalUs = 0;
+	std::atomic<std::uint32_t> _dbQueueWaitCount = 0;
+	std::atomic<std::uint64_t> _dbQueueWaitMaxUs = 0;
 };
 

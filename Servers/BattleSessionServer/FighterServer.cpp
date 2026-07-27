@@ -152,7 +152,7 @@ void FighterServer::OnSecond()
 	CPacket dbtpsmsg;
 	MPGameDBTPS(&dbtpsmsg, data, timestamp);
 
-	data = static_cast<int>(_dbQ.size());
+	data = data = static_cast<int>(GetDBQueueSize());
 	CPacket dbqmsg;
 	MPGameDBMsg(&dbqmsg, data, timestamp);
 
@@ -295,6 +295,11 @@ int FighterServer::GetControlPoolUsingCount()
 	return _controlPool.GetUsingCount();
 }
 
+std::size_t FighterServer::GetDBQueueSize()
+{
+	std::lock_guard<std::mutex> lock(_dbMtx);
+	return _dbQ.size();
+}
 void FighterServer::ShowServerInfo()
 {
 	ContentsServer::ShowServerInfo();
@@ -333,8 +338,8 @@ void FighterServer::ShowServerInfo()
 	}
 	}
 
-	printf("FightResourceCapacity: %d\nFightResourceUsing: %d\nPlayerPoolCapacity: %d\nPlayerPoolUsing: %d\nControlPoolCapacity: %d\nControlPoolUsing: %d\nPlayer: %d\n",
-		GetFightPoolCapacity(),GetFightPoolUsingCount(),GetPlayerPoolCapacity(),GetPlayerPoolUsingCount(),GetControlPoolCapacity(),GetControlPoolUsingCount(),GetPlayerCount());
+	printf("FightResourceCapacity: %d\nFightResourceUsing: %d\nPlayerPoolCapacity: %d\nPlayerPoolUsing: %d\nControlPoolCapacity: %d\nControlPoolUsing: %d\nPlayer: %d\nFightFreeTPS: %d\nDBQueueUsing: %llu",
+		GetFightPoolCapacity(),GetFightPoolUsingCount(),GetPlayerPoolCapacity(),GetPlayerPoolUsingCount(),GetControlPoolCapacity(),GetControlPoolUsingCount(),GetPlayerCount(),_fightFreeCount.load(),GetDBQueueSize());
 	printf("DBSuccessTotal: %llu      DBFailureTotal: %llu\nDBDuplicateKey: %llu      DBDeadlock: %llu\nDBLockTimeout: %llu      DBConnectionLost: %llu\nDBQueryFormatError: %llu      DBUnknownError: %llu\n\n",
 		_dbSaveSuccessTotal.load(), _dbSaveFailureTotal.load(), _dbDuplicateKeyTotal.load(), _dbDeadlockTotal.load(),
 		_dbLockTimeoutTotal.load(), _dbConnectionLostTotal.load(), _dbQueryFormatErrorTotal.load(), _dbUnknownErrorTotal.load());
@@ -479,6 +484,7 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 
 		if (!server->WaitAndPopDBRequest(request))
 		{
+
 			if (server->_dbThreadRun.load() == false && server->_state.load() == CONTROL_STOPPED)
 			{
 				server->_state.store(DB_STOPPED);
@@ -487,6 +493,10 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 			}
 			break;
 		}
+
+		const auto dequeuedAt = std::chrono::steady_clock::now();
+		const auto queueWaitUs = std::chrono::duration_cast<std::chrono::microseconds>(dequeuedAt - request._queuedAt).count();
+		server->RecordDBQueueWait(static_cast<std::uint64_t>(queueWaitUs));
 
 		switch (request._type)
 		{
@@ -578,6 +588,8 @@ void FighterServer::PushDBRequest(DBRequest request)
 {
 	{
 		std::lock_guard<std::mutex> lock(_dbMtx);
+
+		request._queuedAt = std::chrono::steady_clock::now();
 		_dbQ.push(std::move(request));
 	}
 
@@ -643,5 +655,17 @@ void FighterServer::RecordDBSaveCounters(const DBSaveResult& saveResult)
 	default:
 		_dbUnknownErrorTotal.fetch_add(1);
 		break;
+	}
+}
+
+void FighterServer::RecordDBQueueWait(std::uint64_t waitUs)
+{
+	_dbQueueWaitTotalUs.fetch_add(waitUs);
+	_dbQueueWaitCount.fetch_add(1);
+
+	std::uint64_t currentMax = _dbQueueWaitMaxUs.load();
+
+	while (currentMax < waitUs && !_dbQueueWaitMaxUs.compare_exchange_weak(currentMax, waitUs))
+	{
 	}
 }

@@ -3,6 +3,7 @@
 #include <shared_mutex>
 #include <winsock2.h>
 #include <cstdint>
+#include <chrono>
 
 using SessionID = std::int64_t;
 static constexpr std::int32_t MATCH = 1000000001;			//contentsnum
@@ -116,6 +117,7 @@ struct DBRequest
 {
 	DBRequestType _type;
 	BattleResult _battleResult;
+	std::chrono::steady_clock::time_point _queuedAt;
 };
 
 class ReadLock
