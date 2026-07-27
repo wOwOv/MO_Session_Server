@@ -1,4 +1,5 @@
 #include "BattleDB.h"
+#include "Profiler.h"
 
 namespace
 {
@@ -78,6 +79,7 @@ BattleDB::BattleDB(DBConnector& db):_db(db)
 
 DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 {
+	Profile profile("DB_SaveBattleResult");
 	if (!_db.BeginTransaction())
 	{
 		const DBErrorInfo error = _db.GetLastError();
@@ -169,11 +171,11 @@ DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 		return saveResult;
 	}
 
-	LOG(L"Database", LVSYSTEM, L"SaveBattleResult success. match_id=%llu",
-		result._matchID);
+	//LOG(L"Database", LVSYSTEM, L"SaveBattleResult success. match_id=%llu",result._matchID);
 
 	DBSaveResult saveResult;
 	saveResult.succeeded = true;
+
 	return saveResult;
 }
 

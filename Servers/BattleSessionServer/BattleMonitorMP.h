@@ -193,3 +193,17 @@ __forceinline void MPGameDBUnknownError(CPacket* packet, int datavalue, int time
 	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_UNKNOWNERROR;
 	*packet << type << datatype << datavalue << timestamp;
 }
+
+__forceinline void MPGameDBWaitAvg(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_WAIT_AVG;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameDBWaitMax(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_WAIT_MAX;
+	*packet << type << datatype << datavalue << timestamp;
+}

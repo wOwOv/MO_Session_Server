@@ -4,7 +4,7 @@
 #include <thread>
 #include <mutex>
 #include "BattleMonitorMP.h"
-
+#include "Profiler.h"
 
 
 FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGenerator(0),_fightPool(0,true,false)
@@ -220,6 +220,19 @@ void FighterServer::OnSecond()
 	CPacket unknownmsg;
 	MPGameDBUnknownError(&unknownmsg, data, timestamp);
 
+	const auto totalUs = _dbQueueWaitTotalUs.exchange(0);
+	const auto count = _dbQueueWaitCount.exchange(0);
+	const auto maxUs = _dbQueueWaitMaxUs.exchange(0);
+
+	const int average = count == 0 ? 0 : totalUs / count;
+	data = average;
+	CPacket waitavgmsg;
+	MPGameDBWaitAvg(&waitavgmsg, data, timestamp);
+
+	data = static_cast<int>(maxUs);
+	CPacket waitmaxmsg;
+	MPGameDBWaitMax(&waitmaxmsg, data, timestamp);
+
 
 	if (_monitorClient.get() != nullptr)
 	{
@@ -250,8 +263,17 @@ void FighterServer::OnSecond()
 		_monitorClient.get()->SendPacket(clostmsg);
 		_monitorClient.get()->SendPacket(qerrormsg);
 		_monitorClient.get()->SendPacket(unknownmsg);
+		_monitorClient.get()->SendPacket(waitavgmsg);
+		_monitorClient.get()->SendPacket(waitmaxmsg);
 	}
 
+	static unsigned int secondCount = 0;
+	secondCount++;
+	if (secondCount % (60 * 10) == 0)
+	{
+		ProfileDataOutText();
+	}
+	
 }
 
 int FighterServer::GetFightPoolCapacity()
