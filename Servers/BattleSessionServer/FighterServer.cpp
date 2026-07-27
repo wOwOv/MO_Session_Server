@@ -360,7 +360,7 @@ void FighterServer::ShowServerInfo()
 	}
 	}
 
-	printf("FightResourceCapacity: %d\nFightResourceUsing: %d\nPlayerPoolCapacity: %d\nPlayerPoolUsing: %d\nControlPoolCapacity: %d\nControlPoolUsing: %d\nPlayer: %d\nFightFreeTPS: %d\nDBQueueUsing: %llu",
+	printf("FightResourceCapacity: %d\nFightResourceUsing: %d\nPlayerPoolCapacity: %d\nPlayerPoolUsing: %d\nControlPoolCapacity: %d\nControlPoolUsing: %d\nPlayer: %d\nFightFreeTPS: %d\nDBQueueUsing: %llu\n",
 		GetFightPoolCapacity(),GetFightPoolUsingCount(),GetPlayerPoolCapacity(),GetPlayerPoolUsingCount(),GetControlPoolCapacity(),GetControlPoolUsingCount(),GetPlayerCount(),_fightFreeCount.load(),GetDBQueueSize());
 	printf("DBSuccessTotal: %llu      DBFailureTotal: %llu\nDBDuplicateKey: %llu      DBDeadlock: %llu\nDBLockTimeout: %llu      DBConnectionLost: %llu\nDBQueryFormatError: %llu      DBUnknownError: %llu\n\n",
 		_dbSaveSuccessTotal.load(), _dbSaveFailureTotal.load(), _dbDuplicateKeyTotal.load(), _dbDeadlockTotal.load(),
