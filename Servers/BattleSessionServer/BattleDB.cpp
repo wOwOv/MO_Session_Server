@@ -80,8 +80,10 @@ BattleDB::BattleDB(DBConnector& db):_db(db)
 DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 {
 	Profile profile("DB_SaveBattleResult");
+	PRO_BEGIN("DB_SaveBattleResult_Begin");
 	if (!_db.BeginTransaction())
 	{
+		PRO_END("DB_SaveBattleResult_Begin");
 		const DBErrorInfo error = _db.GetLastError();
 
 		LOG(L"Database", LVERROR,L"SaveBattleResult failed. match_id=%lld stage=Begin category=%s mysql_error=%u",
@@ -93,9 +95,11 @@ DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 		saveResult.error = error;
 		return saveResult;
 	}
-
+	PRO_END("DB_SaveBattleResult_Begin");
+	PRO_BEGIN("DB_SaveBattleResult_InsertHistory");
 	if (!InsertBattleHistory(result))
 	{
+		PRO_END("DB_SaveBattleResult_InsertHistory");
 		const DBErrorInfo originalError = _db.GetLastError();
 
 		const bool rollbackSucceeded = _db.Rollback();
@@ -111,9 +115,11 @@ DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 		saveResult.rollbackSucceeded = rollbackSucceeded;
 		return saveResult;
 	}
-
+	PRO_END("DB_SaveBattleResult_InsertHistory");
+	PRO_BEGIN("DB_SaveBattleResult_InsertRecords");
 	if (!InsertPlayerBattleRecords(result))
 	{
+		PRO_END("DB_SaveBattleResult_InsertRecords");
 		const DBErrorInfo originalError = _db.GetLastError();
 
 		const bool rollbackSucceeded = _db.Rollback();
@@ -129,9 +135,11 @@ DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 		saveResult.rollbackSucceeded = rollbackSucceeded;
 		return saveResult;
 	}
-
+	PRO_END("DB_SaveBattleResult_InsertRecords");
+	PRO_BEGIN("DB_SaveBattleResult_UpsertStats");
 	if (!UpsertPlayerBattleStats(result))
 	{
+		PRO_END("DB_SaveBattleResult_UpsertStats");
 		const DBErrorInfo originalError = _db.GetLastError();
 
 		const bool rollbackSucceeded = _db.Rollback();
@@ -147,9 +155,11 @@ DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 		saveResult.rollbackSucceeded = rollbackSucceeded;
 		return saveResult;
 	}
-
+	PRO_END("DB_SaveBattleResult_UpsertStats");
+	PRO_BEGIN("DB_SaveBattleResult_Commit");
 	if (!_db.Commit())
 	{
+		PRO_END("DB_SaveBattleResult_Commit");
 		const DBErrorInfo commitError = _db.GetLastError();
 
 		const bool rollbackSucceeded = _db.Rollback();
@@ -170,7 +180,7 @@ DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 		saveResult.commitOutcomeUnknown = commitOutcomeUnknown;
 		return saveResult;
 	}
-
+	PRO_END("DB_SaveBattleResult_Commit");
 	//LOG(L"Database", LVSYSTEM, L"SaveBattleResult success. match_id=%llu",result._matchID);
 
 	DBSaveResult saveResult;
