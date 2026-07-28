@@ -4,6 +4,7 @@
 #include <thread>
 #include <mutex>
 #include "BattleMonitorMP.h"
+#include "Profiler.h"
 
 
 
@@ -11,8 +12,6 @@ FighterServer::FighterServer() :ContentsServer(ServerType::LANSERVER),_matchIDGe
 {
 	_ctrlThreadRun.store(true);
 	_CtrlThread = std::thread(CtrlThread, this);
-	_dbThreadRun.store(true);
-	_DBThread = std::thread(DBThread, this);
 	_matchContents = std::make_shared<MatchContents>();
 	RegisterContents(MATCH, _matchContents);
 	SetDefaultContents(MATCH);
@@ -26,11 +25,17 @@ FighterServer::~FighterServer()
 {
 }
 
-void FighterServer::FighterServerStart(const char* txtname, char code, char key)
+bool FighterServer::FighterServerStart(const char* txtname, char code, char key)
 {
 	Start(txtname, code, key);
+	if (!StartDBWorkers(txtname))
+	{
+		return false;
+	}
 	_state = SERVER_RUNNING;
 	LOG(L"FighterServer", LVSYSTEM, L"FighterServer Started");
+
+	return true;
 }
 
 void FighterServer::Stop()
@@ -56,7 +61,7 @@ void FighterServer::Stop()
 	StopWorkerThread();
 	printf("Worker Thread Stopped\n");
 	//6. DB Thread ÁßÁö
-	StopDBThread();
+	StopDBWorkers();
 	printf("DB Thread Stopped\n");
 	StopMonitorThread();
 	printf("Monitor Thread Stopped\n");
@@ -376,21 +381,48 @@ void FighterServer::StopControlThread()
 	LOG(L"FighterServer", LVSYSTEM, L"Control Thread Stopped");
 }
 
-void FighterServer::StopDBThread()
+bool FighterServer::StartDBWorkers(const char* txtname)
+{
+	Parser parser;
+	parser.LoadFile(txtname);
+
+	int workerCount = 1;
+	parser.GetValue("FighterServer", "DBWorkerCount", &workerCount);
+	if (workerCount > 0 && workerCount < 5)
+	{
+		_dbWorkerCount = workerCount;
+	}
+	else
+	{
+		LOG(L"Database", LVERROR, L"Wrong Database WorkerThreads Number : %d", workerCount);
+		return false;
+	}
+
+	_dbThreadRun.store(true);
+	_dbWorkers.reserve(_dbWorkerCount);
+
+	for (int index = 0; index < _dbWorkerCount; ++index)
+	{
+		_dbWorkers.emplace_back(DBThread, this);
+	}
+	return true;
+}
+
+void FighterServer::StopDBWorkers()
 {
 	{
 		std::lock_guard<std::mutex> lock(_dbMtx);
 		_dbThreadRun.store(false);
 	}
 
-	_dbCv.notify_one();
+	//_dbCv.notify_one();
 
-	if (_DBThread.joinable())
-	{
-		_DBThread.join();
-	}
-	_state.store(DB_STOPPED);
-	LOG(L"FighterServer", LVSYSTEM, L"DB Thread Stopped");
+	//if (_DBThread.joinable())
+	//{
+	//	_DBThread.join();
+	//}
+	//_state.store(DB_STOPPED);
+	//LOG(L"FighterServer", LVSYSTEM, L"DB Thread Stopped");
 }
 
 __int64 FighterServer::CreateMatchID()
