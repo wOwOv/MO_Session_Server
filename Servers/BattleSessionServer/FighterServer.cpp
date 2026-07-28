@@ -442,14 +442,20 @@ void FighterServer::StopDBWorkers()
 		_dbThreadRun.store(false);
 	}
 
-	//_dbCv.notify_one();
+	_dbCv.notify_all();
 
-	//if (_DBThread.joinable())
-	//{
-	//	_DBThread.join();
-	//}
-	//_state.store(DB_STOPPED);
-	//LOG(L"FighterServer", LVSYSTEM, L"DB Thread Stopped");
+	for (std::thread& worker : _dbWorkers)
+	{
+		if (worker.joinable())
+		{
+			worker.join();
+		}
+	}
+
+	_dbWorkers.clear();
+	_state.store(DB_STOPPED);
+
+	LOG(L"FighterServer", LVSYSTEM, L"All DB workers stopped.");
 }
 
 __int64 FighterServer::CreateMatchID()
@@ -527,7 +533,7 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 	DBConnector db("DBInfo.txt");
 	if (!db.Connect())
 	{
-		LOG(L"Database", LVERROR, L"DBThread failed to connect.");
+		LOG(L"Database", LVERROR, L"DB worker failed to connect. thread_id=%lu", GetCurrentThreadId());
 		return 0;
 	}
 	BattleDB battleDB(db);
@@ -541,8 +547,7 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 
 			if (server->_dbThreadRun.load() == false && server->_state.load() == CONTROL_STOPPED)
 			{
-				server->_state.store(DB_STOPPED);
-				LOG(L"FIghterServer", LVSYSTEM, L"DB Thread Stopped");
+				LOG(L"FighterServer", LVSYSTEM, L"DB Thread Stopped");
 				return 0;
 			}
 			break;
