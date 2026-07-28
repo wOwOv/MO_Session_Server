@@ -12,7 +12,10 @@ int main()
 
 	
 	auto server = std::make_unique<FighterServer>(); 
-	server->FighterServerStart("FighterServerConfig.cnf");
+	if (!server->FighterServerStart("FighterServerConfig.cnf"))
+	{
+		return 1;
+	}
 
 	while (!server->IsShutDownRequested())
 	{

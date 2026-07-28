@@ -20,3 +20,10 @@ MaxUser: 최대 접속자 수
 SetTimeout: 0-타임아웃 기능 끄기 1-켜기
 InitialTimeOut: 초단위 로그인 전 세션에 대한 타임아웃 기준 시간&확인하는 주기, timeout기능 미사용시 0으로 둘 것
 RegularTimeout: 초단위 로그인 후 세션에 대한 타임아웃 기준 시간&확인하는 주기, timeout기능 미사용시 0으로 둘 것
+
+FighterServer
+{
+DBWorkerCount : 1
+}
+
+DBWorkerCount: DB스레드 개수
