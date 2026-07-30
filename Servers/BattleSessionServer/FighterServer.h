@@ -15,6 +15,7 @@
 #include "PDProducer.h"
 #include <atomic>
 #include <cstdint>
+#include <vector>
 
 struct DBSaveResult;
 
@@ -41,7 +42,7 @@ public:
 	FighterServer(FighterServer&&) = delete;
 	FighterServer& operator=(FighterServer&&) = delete;
 
-	void FighterServerStart(const char* txtname, char code = 0, char key = 0);
+	bool FighterServerStart(const char* txtname, char code = 0, char key = 0);
 	virtual void Stop() override;
 
 	//virtual void ServerControl();
@@ -52,7 +53,9 @@ public:
 
 	void RequestStopMatchContents();
 	void StopControlThread();
-	void StopDBThread();
+	
+	bool StartDBWorkers(const char* txtname);
+	void StopDBWorkers();
 
 	virtual bool OnConnectionRequest(const SOCKADDR_IN& clientaddr) override;
 	virtual void OnAccept(const SOCKADDR_IN& clientaddr, __int64 sessionID) override;
@@ -124,11 +127,12 @@ private:
 	MatchIDGenerator _matchIDGenerator;
 
 	//DB저장스레드
-	std::thread _DBThread;
+	int _dbWorkerCount = 1;
+	std::vector<std::thread> _dbWorkers;
 	std::queue<DBRequest> _dbQ;
 	std::condition_variable _dbCv;
 	std::mutex _dbMtx;
-	std::atomic<bool> _dbThreadRun;
+	std::atomic<bool> _dbThreadRun=false;
 
 
 	std::unordered_set<SOCKADDR_IN, SockAddrInHash, SockAddrInEqual> _banSet;
