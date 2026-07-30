@@ -23,7 +23,7 @@ RegularTimeout: 초단위 로그인 후 세션에 대한 타임아웃 기준 시
 
 FighterServer
 {
-DBWorkerCount : 1
+DBWorkerCount : 2
 }
 
 DBWorkerCount: DB스레드 개수
