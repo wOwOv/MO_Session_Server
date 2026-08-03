@@ -78,6 +78,11 @@ BattleDB::BattleDB(DBConnector& db):_db(db)
 
 DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
 {
+	return SaveBattleResultOnce(result);
+}
+
+DBSaveResult BattleDB::SaveBattleResultOnce(const BattleResult& result)
+{
 	if (!_db.BeginTransaction())
 	{
 		const DBErrorInfo error = _db.GetLastError();
