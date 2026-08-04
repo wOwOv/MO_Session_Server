@@ -310,6 +310,12 @@ int FighterServer::GetControlPoolUsingCount()
 	return _controlPool.GetUsingCount();
 }
 
+int FighterServer::GetDBQueueSize()
+{
+	std::lock_guard <std::mutex> lock(_dbMtx);
+	return static_cast<int>(_dbQ.size());
+}
+
 void FighterServer::ShowServerInfo()
 {
 	ContentsServer::ShowServerInfo();
@@ -350,9 +356,10 @@ void FighterServer::ShowServerInfo()
 
 	printf("FightResourceCapacity: %d\nFightResourceUsing: %d\nPlayerPoolCapacity: %d\nPlayerPoolUsing: %d\nControlPoolCapacity: %d\nControlPoolUsing: %d\nPlayer: %d\n",
 		GetFightPoolCapacity(),GetFightPoolUsingCount(),GetPlayerPoolCapacity(),GetPlayerPoolUsingCount(),GetControlPoolCapacity(),GetControlPoolUsingCount(),GetPlayerCount());
-	printf("DBSuccessTotal: %llu      DBFailureTotal: %llu\nDBDuplicateKey: %llu      DBDeadlock: %llu\nDBLockTimeout: %llu      DBConnectionLost: %llu\nDBQueryFormatError: %llu      DBUnknownError: %llu\n\n",
+	printf("FightAlloc: %d      FightFree: %d\nDBSaveCount: %d      DBQueueSize:%d\n", _fightAllocCount.load(), _fightFreeCount.load(), _dbSaveCount.load(), GetDBQueueSize());
+	printf("DBSuccessTotal: %llu      DBFailureTotal: %llu\nDBDuplicateKey: %llu      DBDeadlock: %llu\n\DBLockTimeout: %llu      DBConnectionLost: %llu\nDBQueryFormatError: %llu      DBUnknownError: %llu\nDBRetry: %d      DBRetryExhausted: %d\n\n",
 		_dbSaveSuccessTotal.load(), _dbSaveFailureTotal.load(), _dbDuplicateKeyTotal.load(), _dbDeadlockTotal.load(),
-		_dbLockTimeoutTotal.load(), _dbConnectionLostTotal.load(), _dbQueryFormatErrorTotal.load(), _dbUnknownErrorTotal.load());
+		_dbLockTimeoutTotal.load(), _dbConnectionLostTotal.load(), _dbQueryFormatErrorTotal.load(), _dbUnknownErrorTotal.load(),_dbRetryTotal.load(),_dbRetryExhaustedTotal.load());
 }
 
 void FighterServer::OtherServerControl(int controlKey)

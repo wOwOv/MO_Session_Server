@@ -71,6 +71,7 @@ public:
 	int GetPlayerPoolUsingCount();
 	int GetControlPoolCapacity();
 	int GetControlPoolUsingCount();
+	int GetDBQueueSize();
 
 	__int64 CreateMatchID();
 
