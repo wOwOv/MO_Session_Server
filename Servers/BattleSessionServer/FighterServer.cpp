@@ -226,6 +226,13 @@ void FighterServer::OnSecond()
 	CPacket unknownmsg;
 	MPGameDBUnknownError(&unknownmsg, data, timestamp);
 
+	data = _dbRetryTotal.load();
+	CPacket retrymsg;
+	MPGameDBRetry(&retrymsg, data, timestamp);
+
+	data = _dbRetryExhaustedTotal.load();
+	CPacket retryexhaustedmsg;
+	MPGameDBRetryExhausted(&retryexhaustedmsg, data, timestamp);
 
 	if (_monitorClient.get() != nullptr)
 	{
@@ -256,6 +263,8 @@ void FighterServer::OnSecond()
 		_monitorClient.get()->SendPacket(clostmsg);
 		_monitorClient.get()->SendPacket(qerrormsg);
 		_monitorClient.get()->SendPacket(unknownmsg);
+		_monitorClient.get()->SendPacket(retrymsg);
+		_monitorClient.get()->SendPacket(retryexhaustedmsg);
 	}
 
 }
@@ -649,6 +658,16 @@ bool FighterServer::WaitAndPopDBRequest(DBRequest& outrequest)
 void FighterServer::RecordDBSaveCounters(const DBSaveResult& saveResult)
 {
 	_dbSaveCount.fetch_add(1);
+
+	if (saveResult.attemptCount > 1)
+	{
+		_dbRetryTotal.fetch_add(saveResult.attemptCount - 1);
+	}
+
+	if (saveResult.retryExhausted)
+	{
+		_dbRetryExhaustedTotal.fetch_add(1);
+	}
 
 	if (saveResult.succeeded)
 	{

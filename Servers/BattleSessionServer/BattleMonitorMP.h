@@ -193,3 +193,17 @@ __forceinline void MPGameDBUnknownError(CPacket* packet, int datavalue, int time
 	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_UNKNOWNERROR;
 	*packet << type << datatype << datavalue << timestamp;
 }
+
+__forceinline void MPGameDBRetry(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_RETRY;
+	*packet << type << datatype << datavalue << timestamp;
+}
+
+__forceinline void MPGameDBRetryExhausted(CPacket* packet, int datavalue, int timestamp)
+{
+	WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
+	BYTE datatype = dfMONITOR_DATA_TYPE_GAME_DB_RETRY_EXHAUSTED;
+	*packet << type << datatype << datavalue << timestamp;
+}
