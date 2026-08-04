@@ -156,6 +156,8 @@ enum en_PACKET_SS_MONITOR_DATA_UPDATE
 	dfMONITOR_DATA_TYPE_GAME_DB_CONNECTIONLOST=34,			//게임서버 DB ConnectionLost 실패 누적 횟수
 	dfMONITOR_DATA_TYPE_GAME_DB_QUERYFORMATERROR=35,		//게임서버 DB QueryFormatError 실패 누적 횟수
 	dfMONITOR_DATA_TYPE_GAME_DB_UNKNOWNERROR=36,			//게임서버 DB Unknown Error 실패 누적 횟수
+	dfMONITOR_DATA_TYPE_GAME_DB_RETRY=37,					//게임서버 DB 저장 재시도 횟수
+	dfMONITOR_DATA_TYPE_GAME_DB_RETRY_EXHAUSTED=38,			//게임서버 DB 저장 재시도 소진 횟수
 
 
 	dfMONITOR_DATA_TYPE_CHAT_SERVER_RUN = 50,		// 채팅서버 ChatServer 실행 여부 ON / OFF

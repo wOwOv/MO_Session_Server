@@ -226,6 +226,13 @@ void FighterServer::OnSecond()
 	CPacket unknownmsg;
 	MPGameDBUnknownError(&unknownmsg, data, timestamp);
 
+	data = _dbRetryTotal.load();
+	CPacket retrymsg;
+	MPGameDBRetry(&retrymsg, data, timestamp);
+
+	data = _dbRetryExhaustedTotal.load();
+	CPacket retryexhaustedmsg;
+	MPGameDBRetryExhausted(&retryexhaustedmsg, data, timestamp);
 
 	if (_monitorClient.get() != nullptr)
 	{
@@ -256,6 +263,8 @@ void FighterServer::OnSecond()
 		_monitorClient.get()->SendPacket(clostmsg);
 		_monitorClient.get()->SendPacket(qerrormsg);
 		_monitorClient.get()->SendPacket(unknownmsg);
+		_monitorClient.get()->SendPacket(retrymsg);
+		_monitorClient.get()->SendPacket(retryexhaustedmsg);
 	}
 
 }
@@ -301,6 +310,12 @@ int FighterServer::GetControlPoolUsingCount()
 	return _controlPool.GetUsingCount();
 }
 
+int FighterServer::GetDBQueueSize()
+{
+	std::lock_guard <std::mutex> lock(_dbMtx);
+	return static_cast<int>(_dbQ.size());
+}
+
 void FighterServer::ShowServerInfo()
 {
 	ContentsServer::ShowServerInfo();
@@ -341,9 +356,10 @@ void FighterServer::ShowServerInfo()
 
 	printf("FightResourceCapacity: %d\nFightResourceUsing: %d\nPlayerPoolCapacity: %d\nPlayerPoolUsing: %d\nControlPoolCapacity: %d\nControlPoolUsing: %d\nPlayer: %d\n",
 		GetFightPoolCapacity(),GetFightPoolUsingCount(),GetPlayerPoolCapacity(),GetPlayerPoolUsingCount(),GetControlPoolCapacity(),GetControlPoolUsingCount(),GetPlayerCount());
-	printf("DBSuccessTotal: %llu      DBFailureTotal: %llu\nDBDuplicateKey: %llu      DBDeadlock: %llu\nDBLockTimeout: %llu      DBConnectionLost: %llu\nDBQueryFormatError: %llu      DBUnknownError: %llu\n\n",
+	printf("FightAlloc: %d      FightFree: %d\nDBSaveCount: %d      DBQueueSize:%d\n", _fightAllocCount.load(), _fightFreeCount.load(), _dbSaveCount.load(), GetDBQueueSize());
+	printf("DBSuccessTotal: %llu      DBFailureTotal: %llu\nDBDuplicateKey: %llu      DBDeadlock: %llu\n\DBLockTimeout: %llu      DBConnectionLost: %llu\nDBQueryFormatError: %llu      DBUnknownError: %llu\nDBRetry: %d      DBRetryExhausted: %d\n\n",
 		_dbSaveSuccessTotal.load(), _dbSaveFailureTotal.load(), _dbDuplicateKeyTotal.load(), _dbDeadlockTotal.load(),
-		_dbLockTimeoutTotal.load(), _dbConnectionLostTotal.load(), _dbQueryFormatErrorTotal.load(), _dbUnknownErrorTotal.load());
+		_dbLockTimeoutTotal.load(), _dbConnectionLostTotal.load(), _dbQueryFormatErrorTotal.load(), _dbUnknownErrorTotal.load(),_dbRetryTotal.load(),_dbRetryExhaustedTotal.load());
 }
 
 void FighterServer::OtherServerControl(int controlKey)
@@ -534,9 +550,13 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 			server->RecordDBSaveCounters(saveResult);
 			if (!saveResult.succeeded)
 			{
-				LOG(L"Database", LVSYSTEM,
-					L"Battle result DB save failed. match_id=%lld",
-					request._battleResult._matchID);
+				LOG(
+					L"Database",
+					LVSYSTEM,
+					L"Battle result DB save failed. match_id=%lld attempts=%u retry_exhausted=%d",
+					request._battleResult._matchID,
+					saveResult.attemptCount,
+					saveResult.retryExhausted);
 			}
 
 			break;
@@ -645,6 +665,16 @@ bool FighterServer::WaitAndPopDBRequest(DBRequest& outrequest)
 void FighterServer::RecordDBSaveCounters(const DBSaveResult& saveResult)
 {
 	_dbSaveCount.fetch_add(1);
+
+	if (saveResult.attemptCount > 1)
+	{
+		_dbRetryTotal.fetch_add(saveResult.attemptCount - 1);
+	}
+
+	if (saveResult.retryExhausted)
+	{
+		_dbRetryExhaustedTotal.fetch_add(1);
+	}
 
 	if (saveResult.succeeded)
 	{

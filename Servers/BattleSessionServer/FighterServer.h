@@ -71,6 +71,7 @@ public:
 	int GetPlayerPoolUsingCount();
 	int GetControlPoolCapacity();
 	int GetControlPoolUsingCount();
+	int GetDBQueueSize();
 
 	__int64 CreateMatchID();
 
@@ -163,5 +164,8 @@ private:
 	std::atomic<std::uint64_t> _dbConnectionLostTotal = 0;
 	std::atomic<std::uint64_t> _dbQueryFormatErrorTotal = 0;
 	std::atomic<std::uint64_t> _dbUnknownErrorTotal = 0;
+
+	std::atomic<std::uint64_t> _dbRetryTotal = 0;
+	std::atomic<std::uint64_t> _dbRetryExhaustedTotal = 0;
 };
 

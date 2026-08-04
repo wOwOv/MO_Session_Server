@@ -22,6 +22,8 @@ struct DBSaveResult
     bool rollbackAttempted = false;
     bool rollbackSucceeded = false;
     bool commitOutcomeUnknown = false;
+    std::uint8_t attemptCount = 1;
+    bool retryExhausted = false;
 };
 
 class BattleDB
@@ -31,11 +33,15 @@ public:
     DBSaveResult SaveBattleResult(const BattleResult& result);
 
 private:
+    DBSaveResult SaveBattleResultOnce(const BattleResult& result);
 	bool InsertBattleHistory(const BattleResult& result);
 	bool InsertPlayerBattleRecords(const BattleResult& result);
 	bool UpsertPlayerBattleStats(const BattleResult& result);
 
 private:
 	DBConnector& _db;
+
+    static constexpr int kMaxSaveAttempts = 3;
+    static constexpr int kRetryBackoffMs = 5;
 };
 
