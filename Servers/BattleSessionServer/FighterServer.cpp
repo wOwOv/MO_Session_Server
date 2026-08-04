@@ -534,9 +534,13 @@ unsigned __stdcall FighterServer::DBThread(LPVOID arg)
 			server->RecordDBSaveCounters(saveResult);
 			if (!saveResult.succeeded)
 			{
-				LOG(L"Database", LVSYSTEM,
-					L"Battle result DB save failed. match_id=%lld",
-					request._battleResult._matchID);
+				LOG(
+					L"Database",
+					LVSYSTEM,
+					L"Battle result DB save failed. match_id=%lld attempts=%u retry_exhausted=%d",
+					request._battleResult._matchID,
+					saveResult.attemptCount,
+					saveResult.retryExhausted);
 			}
 
 			break;

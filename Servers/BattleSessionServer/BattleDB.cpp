@@ -1,4 +1,6 @@
 #include "BattleDB.h"
+#include <chrono>
+#include <thread>
 
 namespace
 {
@@ -71,14 +73,73 @@ namespace
 			return L"None";
 		}
 	}
+
+	bool IsRetryableSaveError(const DBSaveResult& saveResult)
+	{
+		if (saveResult.commitOutcomeUnknown)
+		{
+			return false;
+		}
+
+		if (saveResult.rollbackAttempted && !saveResult.rollbackSucceeded)
+		{
+			return false;
+		}
+
+		if (saveResult.stage == DBSaveStage::Commit)
+		{
+			return false;
+		}
+
+		return saveResult.error.category == DBErrorCategory::Deadlock ||
+			saveResult.error.category == DBErrorCategory::LockTimeout;
+	}
 }
 
 BattleDB::BattleDB(DBConnector& db):_db(db)
 {}
 
-DBSaveResult BattleDB::SaveBattleResult(const BattleResult & result)
+DBSaveResult BattleDB::SaveBattleResult(const BattleResult& result)
 {
-	return SaveBattleResultOnce(result);
+	for (int attempt = 1; attempt <= kMaxSaveAttempts; ++attempt)
+	{
+		DBSaveResult saveResult = SaveBattleResultOnce(result);
+		saveResult.attemptCount = static_cast<std::uint8_t>(attempt);
+
+		if (saveResult.succeeded)
+		{
+			return saveResult;
+		}
+
+		if (!IsRetryableSaveError(saveResult))
+		{
+			return saveResult;
+		}
+
+		if (attempt == kMaxSaveAttempts)
+		{
+			saveResult.retryExhausted = true;
+			return saveResult;
+		}
+
+		const int backoffMs = kRetryBackoffMs * attempt;
+
+		LOG(
+			L"Database",
+			LVERROR,
+			L"Retrying battle result save. match_id=%lld attempt=%d next_attempt=%d "
+			L"category=%s mysql_error=%u backoff_ms=%d",
+			result._matchID,
+			attempt,
+			attempt + 1,
+			GetDBErrorCategoryName(saveResult.error.category),
+			saveResult.error.mysqlError,
+			backoffMs);
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(backoffMs));
+	}
+
+	return {};
 }
 
 DBSaveResult BattleDB::SaveBattleResultOnce(const BattleResult& result)
