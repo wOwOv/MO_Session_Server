@@ -10,6 +10,11 @@ void StubForMatch::ProcMatchDefault(__int64 sessionID, CPacket packet)
 
 void StubForFight::ProcCSMoveStart(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
+	if (!IsValidMoveDirection(dir))
+	{
+		_server->Disconnect(sessionID);
+		return;
+	}
 	Player* player = FindPlayer(sessionID);
 	if (player == nullptr)
 	{
@@ -22,6 +27,18 @@ void StubForFight::ProcCSMoveStart(__int64 sessionID, unsigned char dir, unsigne
 		return;
 	}
 	//player 움직임 정보 변경
+	if (player->_move == dir)
+	{
+		return;
+	}
+	const std::uint32_t now = timeGetTime();
+
+	if (!CanHandleMoveRequest(*player, now))
+	{
+		return;
+	}
+
+	player->_lastMoveRequestAt = now;
 	switch (dir)
 	{
 	case dfPACKET_MOVE_DIR_LL:
@@ -48,6 +65,11 @@ void StubForFight::ProcCSMoveStart(__int64 sessionID, unsigned char dir, unsigne
 
 void StubForFight::ProcCSMoveStop(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
+	if (!IsValidMoveDirection(dir))
+	{
+		_server->Disconnect(sessionID);
+		return;
+	}
 	Player* player = FindPlayer(sessionID);
 	if (player == nullptr)
 	{
@@ -57,6 +79,10 @@ void StubForFight::ProcCSMoveStop(__int64 sessionID, unsigned char dir, unsigned
 	if (!IsPositionSyncValid(*player, x, y))
 	{
 		_server->Disconnect(sessionID);
+		return;
+	}
+	if (player->_move == -1)
+	{
 		return;
 	}
 	//player 움직임 정보 변경
@@ -88,6 +114,11 @@ void StubForFight::ProcCSMoveStop(__int64 sessionID, unsigned char dir, unsigned
 
 void StubForFight::ProcCSAttack1(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
+	if (!IsValidMoveDirection(dir))
+	{
+		_server->Disconnect(sessionID);
+		return;
+	}
 	Player* player = FindPlayer(sessionID);
 	if (player == nullptr)
 	{
@@ -100,7 +131,15 @@ void StubForFight::ProcCSAttack1(__int64 sessionID, unsigned char dir, unsigned 
 		return;
 	}
 
+	const std::uint32_t now = timeGetTime();
+
+	if (!CanHandleAttack(*player, now))
+	{
+		return;
+	}
+
 	//해당 플레이어 공격 정보 처리
+	player->_lastAttackRequestAt = now;
 	UpdateActionState(*player, dir, x, y);
 
 	//해당 플레이어 공격 정보 send()
@@ -115,6 +154,11 @@ void StubForFight::ProcCSAttack1(__int64 sessionID, unsigned char dir, unsigned 
 
 void StubForFight::ProcCSAttack2(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
+	if (!IsValidMoveDirection(dir))
+	{
+		_server->Disconnect(sessionID);
+		return;
+	}
 	Player* player = FindPlayer(sessionID);
 	if (player == nullptr)
 	{
@@ -126,7 +170,16 @@ void StubForFight::ProcCSAttack2(__int64 sessionID, unsigned char dir, unsigned 
 		_server->Disconnect(sessionID);
 		return;
 	}
+
+	const std::uint32_t now = timeGetTime();
+
+	if (!CanHandleAttack(*player, now))
+	{
+		return;
+	}
+
 	//해당 플레이어 공격 정보 처리
+	player->_lastAttackRequestAt = now;
 	UpdateActionState(*player, dir, x, y);
 
 	//해당 플레이어 공격 정보 send()
@@ -142,6 +195,11 @@ void StubForFight::ProcCSAttack2(__int64 sessionID, unsigned char dir, unsigned 
 
 void StubForFight::ProcCSAttack3(__int64 sessionID, unsigned char dir, unsigned short x, unsigned short y)
 {
+	if (!IsValidMoveDirection(dir))
+	{
+		_server->Disconnect(sessionID);
+		return;
+	}
 	Player* player = FindPlayer(sessionID);
 	if (player == nullptr)
 	{
@@ -153,7 +211,16 @@ void StubForFight::ProcCSAttack3(__int64 sessionID, unsigned char dir, unsigned 
 		_server->Disconnect(sessionID);
 		return;
 	}
+
+	const std::uint32_t now = timeGetTime();
+
+	if (!CanHandleAttack(*player, now))
+	{
+		return;
+	}
+
 	//해당 플레이어 공격 정보 처리
+	player->_lastAttackRequestAt = now;
 	UpdateActionState(*player, dir, x, y);
 
 	//해당 플레이어 공격 정보 send()
@@ -211,6 +278,40 @@ Player* StubForFight::FindPlayer(__int64 sessionID)
 bool StubForFight::IsPositionSyncValid(const Player& player, unsigned short x, unsigned short y) const
 {
 	return abs(player._x - x) <= dfERROR_RANGE && abs(player._y - y) <= dfERROR_RANGE;
+}
+
+bool StubForFight::IsValidMoveDirection(unsigned char dir)
+{
+	switch (dir)
+	{
+	case dfPACKET_MOVE_DIR_LL:
+	case dfPACKET_MOVE_DIR_LU:
+	case dfPACKET_MOVE_DIR_UU:
+	case dfPACKET_MOVE_DIR_RU:
+	case dfPACKET_MOVE_DIR_RR:
+	case dfPACKET_MOVE_DIR_RD:
+	case dfPACKET_MOVE_DIR_DD:
+	case dfPACKET_MOVE_DIR_LD:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+bool StubForFight::CanHandleMoveRequest(const Player& player, std::uint32_t now) const
+{
+	return player._lastMoveRequestAt == 0 || now - player._lastMoveRequestAt >= MOVE_REQUEST_INTERVAL_MS;
+}
+
+bool StubForFight::CanHandleAttack(const Player& player, std::uint32_t now) const
+{
+	if (player._lastAttackRequestAt != 0 && now - player._lastAttackRequestAt < ATTACK_REQUEST_INTERVAL_MS)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 int StubForFight::CollectOtherSessions(__int64 sessionID, __int64(&sessionA)[6]) const
