@@ -42,6 +42,12 @@ static constexpr std::uint8_t ATTACK1DMG = 10;
 static constexpr std::uint8_t ATTACK2DMG = 30;
 static constexpr std::uint8_t ATTACK3DMG = 50;
 
+//---------------------------------------------------------------
+// 요청 처리 간격
+//---------------------------------------------------------------
+static constexpr std::uint32_t MOVE_REQUEST_INTERVAL_MS = 20;
+static constexpr std::uint32_t ATTACK_REQUEST_INTERVAL_MS = 200;
+
 //-----------------------------------------------------------------
 // 팀 위치
 //-----------------------------------------------------------------
@@ -76,6 +82,9 @@ struct Player
 	std::int8_t _move=-1;
 	Team _team;			//1: red, 2: blue
 	
+	std::uint32_t _lastMoveRequestAt = 0;
+	std::uint32_t _lastAttackRequestAt = 0;
+
 	std::int32_t _contents;
 };
 

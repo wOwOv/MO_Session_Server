@@ -22,6 +22,10 @@ void StubForFight::ProcCSMoveStart(__int64 sessionID, unsigned char dir, unsigne
 		return;
 	}
 	//player 움직임 정보 변경
+	if (player->_move == dir)
+	{
+		return;
+	}
 	switch (dir)
 	{
 	case dfPACKET_MOVE_DIR_LL:
@@ -57,6 +61,10 @@ void StubForFight::ProcCSMoveStop(__int64 sessionID, unsigned char dir, unsigned
 	if (!IsPositionSyncValid(*player, x, y))
 	{
 		_server->Disconnect(sessionID);
+		return;
+	}
+	if (player->_move == -1)
+	{
 		return;
 	}
 	//player 움직임 정보 변경
