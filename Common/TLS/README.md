@@ -19,8 +19,11 @@
 
 ```mermaid
 flowchart LR
-    ThreadA["Worker Thread A"] --> PoolA["TLS Pool A<br/>Node List / Free List"]
-    ThreadB["Worker Thread B"] --> PoolB["TLS Pool B<br/>Node List / Free List"]
+    ThreadA["Worker Thread A"] --> PoolA["`TLS Pool A
+Node List / Free List`"]
+
+    ThreadB["Worker Thread B"] --> PoolB["`TLS Pool B
+Node List / Free List`"]
 
     PoolA <--> Shared["Shared Chunk List"]
     PoolB <--> Shared
