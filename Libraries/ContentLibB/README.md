@@ -1,127 +1,293 @@
-# ContentLibB
+  # ContentLibB
 
-## 개요
-ContentLibB는 IOCP 기반 네트워크 계층 위에서 동작하는 컨텐츠 처리 라이브러리로,  
-RPC 기반 메시지 처리와 멀티스레드 환경에서의 컨텐츠 실행을 지원하기 위해 설계되었습니다.
+`ContentLibB`는 Windows IOCP 네트워크 처리 위에서 콘텐츠 단위로 로직을 실행하기 위한 라이브러리입니다.
 
-네트워크에서 수신된 요청을 RPC 형태로 해석하고, 해당 컨텐츠의 로직을 실행하는 구조를 제공하며,  
-컨텐츠 데이터와 처리 흐름을 분리하여 서버 확장성과 구조적 명확성을 확보하는 것을 목표로 했습니다.
+네트워크 이벤트를 `Contents` 객체에 전달하고 동일한 콘텐츠의 로직을 직렬로 실행합니다. 콘텐츠 등록·해제와 세션 이동을 지원하며, 직접 구현한 RPC Compiler를 통해 Stub·Proxy 코드를 생성합니다.
 
----
-## 라이브러리 구조
-![ContentLibB](../../Images/contentlibB_structure.png)
+## 전체 구조
 
----
-## 사용법
+```mermaid
+flowchart LR
+    Client["Game Client"] -->|"TCP / Custom Binary Packet"| Server["ContentsServer"]
 
-RPCDefinition
-![defitinion](../../Images/definition.png)
-##사이의 문자열: RPCCompiler가 생성할 파일의 이름 #Example#->ExampleDefine.h
+    Server --> Session["Session Management"]
+    Server --> Scheduler["Frame Scheduler"]
+    Server --> Map["Contents Map"]
 
-<>사이의 문자열: Stub과 Proxy 클래스의 이름 <Town>->class TownProxy
+    Map --> ContentA["Contents A"]
+    Map --> ContentB["Contents B"]
 
-CS: Client->Server Stub클래스의 함수로 선언됨
+    Client -->|"수신 패킷"| Stub["Generated Stub"]
+    Stub -->|"타입·인자 추출"| ContentA
 
-SC: Server->Client Proxy클래스의 함수로 선언, 정의됨
+    ContentA -->|"전송 함수 호출"| Proxy["Generated Proxy"]
+    Proxy -->|"패킷 생성 및 전송"| Client
+```
 
-SCCreateMe: 함수의 이름이 됨
+## 주요 기능
 
-(unsigned int id,unsigned char dir,unsigned short x,unsigned short y,unsigned char hp): 메시지 데이터 구조
+- Windows IOCP 기반 비동기 네트워크 처리
+- 클라이언트 Session 관리
+- 콘텐츠 등록 및 해제
+- 기본 콘텐츠 지정 및 세션 이동
+- 콘텐츠 단위 로직 직렬 실행
+- Frame 기반 `OnUpdate()` 실행
+- `shared_ptr` 기반 콘텐츠 수명 관리
+- Stub·Proxy 기반 패킷 처리
+- RPC Definition 기반 통신 코드 생성
 
-'#'뒤의 숫자: 패킷 식별 번호
+## ContentsServer
 
-1. RPCDefinition 규칙을 따라서 Stub, Proxy에 넣을 함수들 작성(ContentsServer와 Content 모두 세션으로부터 메시지가 오면 Stub의 ProcMessage를 호출하므로 위 예시의 Match 처럼 빈칸으로 두고 작성 후 연결)
-2. 빌드 전 이벤트를 사용하여 ServerRPCCompiler.exe와 Definition File을 인자로 넘겨 실행
-3. Define.h, Proxy.h, Proxy.cpp, Stub.h, Stub.cpp가 생성되었다면 프로젝트로 가져오기
-4. ContentsServer를 상속받은 클래스 구현 - 이벤트 핸들러 함수 오버라이딩
-- OnConnectionRequest 클라이언트 연결 요청 시 세션을 생성하기 전에 호출되며, 연결을 허용할지 결정할 기회를 제공한다.
-- OnAccept 세션이 생성된 이후 호출되며, 연결이 정상적으로 수락되었음을 알린다.
-- OnRelease 세션이 정리된 이후 호출되며, 이후에는 해당 sessionID를 가진 세션에 대해 어떤 이벤트도 발생하지 않음을 보장한다.
-- OnUnusual 메시지 디코딩에 실패하거나 패킷 헤더의 코드가 일치하지 않는 등 비정상적인 상황이 발생했을 때 호출된다.
-- OnSecond 모니터링 스레드에 의해 1초마다 호출되며, 주기적인 상태 확인이나 통계 처리와 같은 작업에 사용된다.
-  
-(메시지가 도착했을때 세션이 속한 컨텐츠가 없을시 ContentsServer에 연결된 Stub의 ProcMessage 호출)
+`ContentsServer`는 네트워크와 콘텐츠 실행 환경을 관리하는 기반 클래스입니다.
 
-5. Contents를 상속받은 클래스 구현 - 이벤트 핸들러 함수 오버라이딩
-- OnEnter 컨텐츠에 세션 입장시 호출
-- OnLeave 세션 퇴장시 호출
-- OnUpdate 설정한 프레임마다 호출
-  
-  (메시지 도착시 Contents에 연결된 Stub의 ProcMessage 호출)
-  
-6. Proxy의 경우 해당 클래스 객체 생성 후 필요한 Contents나 ContentsServer에 AttachProxy
-7. Stub의 경우 선언된 Stub클래스를 상속받은 클래스에서 가상 함수 오버라이딩
-8. 구현한 Stub클래스 객체 생성 후 Contents나 ContentsServer에 AttachStub
-9. SetDefaultContents로 기본 컨텐츠 설정 가능
-10. InsertToContents: 다른 컨텐츠로 이동시키기, DeleteFromContents: 컨텐츠에서 퇴장시키기
-11.  ContentsServer의 Start함수 호출하여 서버 시작
- ---
+주요 역할은 다음과 같습니다.
 
-Contents를 상속받아 클래스 생성
-Contents의 이벤트 핸들러 함수 오버라이딩
+- Listen Socket과 IOCP 관리
+- Accept 및 IOCP Worker Thread 관리
+- Session 생성과 해제
+- 패킷 수신 및 송신
+- 콘텐츠 등록과 해제
+- 콘텐츠 이벤트 전달
+- Frame Scheduler 관리
+- Timeout 및 모니터링 처리
 
+서버 구현체는 `ContentsServer`를 상속하고 연결 및 Session 이벤트를 구현합니다.
 
-## 역할
-- RPC 기반 메시지 처리 구조 제공
-- 컨텐츠 단위 로직 실행
-- 네트워크 계층과 컨텐츠 계층 분리
-- 멀티스레드 환경에서의 컨텐츠 처리 지원
+| 이벤트 | 호출 시점 |
+|---|---|
+| `OnConnectionRequest()` | 연결을 수락하기 전 |
+| `OnAccept()` | Session 생성 후 |
+| `OnRelease()` | Session 연결 종료 시 |
+| `OnUnusual()` | Packet Code 불일치 또는 Decode 실패 시 |
+| `OnSecond()` | 1초 주기의 서버 모니터링 시 |
 
----
+## Contents
 
-## 주요 구성
+`Contents`는 게임 로직의 실행 단위를 나타내는 추상 클래스입니다.
 
-### Content 객체
-- 게임 로직 단위를 담당하는 객체
-- 컨텐츠 데이터를 관리
-- RPC 요청에 대응하는 로직 함수 보유
+| 이벤트 | 역할 |
+|---|---|
+| `OnEnter()` | Session이 콘텐츠에 입장할 때 호출 |
+| `OnLeave()` | Session이 콘텐츠에서 나갈 때 호출 |
+| `OnUpdate()` | 설정된 Frame마다 호출 |
+| `OnShutDown()` | 콘텐츠 종료 요청 시 호출 |
 
-### RPC 처리 구조
-- 수신된 Packet을 RPC 메시지로 변환
-- RPC ID 기반으로 핸들러 함수 매핑
-- Stub / Proxy 구조를 통해 호출 흐름 구성
+콘텐츠는 생성할 때 Contents Number와 Update Frame을 설정합니다.
 
-### 네트워크 연동
-- ContentsServer에서 전달된 이벤트를 기반으로 동작
-- Session과 컨텐츠를 연결하여 요청 처리
+```cpp
+Contents(std::int32_t contentsNum, std::int32_t frame);
+```
 
----
+`frame`은 밀리초 단위이며, `-1`로 설정하면 주기적인 `OnUpdate()`를 실행하지 않습니다.
 
-## 동작 흐름
+## 콘텐츠 단위 로직 직렬 실행
 
-1. 클라이언트 또는 서버로부터 Packet이 수신됩니다.
-2. Packet은 RPC 메시지 형태로 파싱됩니다.
-3. RPC ID를 기준으로 해당 컨텐츠의 핸들러가 결정됩니다.
-4. 컨텐츠 로직이 실행됩니다.
-5. 필요 시 결과를 RPC 응답 형태로 송신합니다.
+각 `Contents` 객체는 전용 SRW Lock을 가집니다.
 
----
+IOCP Worker Thread는 콘텐츠 이벤트를 실행하기 전에 해당 콘텐츠의 Exclusive Lock을 획득합니다.
 
-## 핵심 구현 포인트
+```text
+콘텐츠 조회
+→ 콘텐츠별 Exclusive Lock 획득
+→ OnEnter / OnLeave / OnUpdate / Stub 실행
+→ Lock 해제
+```
 
-- RPC 기반 요청 / 응답 처리 구조 직접 구현
-- Packet → RPC → Content 로 이어지는 처리 흐름 구성
-- 컨텐츠 로직과 네트워크 처리의 명확한 분리
-- 멀티스레드 환경에서 컨텐츠 처리 구조 설계
-- RPC Compiler를 통한 코드 생성 및 호출 구조 구성
+따라서 동일한 콘텐츠의 로직은 한 번에 하나만 실행됩니다.
 
----
+서로 다른 콘텐츠는 각각 별도의 Lock을 사용하므로 여러 IOCP Worker Thread에서 병렬로 실행할 수 있습니다.
 
-## ContentLibA와의 차이
+```mermaid
+flowchart LR
+    Workers["IOCP Worker Threads"] --> ContentA["Contents A Lock"]
+    Workers --> ContentB["Contents B Lock"]
+    Workers --> ContentC["Contents C Lock"]
 
-| 항목 | ContentLibA | ContentLibB |
-|------|------------|------------|
-| 실행 트리거 | 이벤트 큐 | RPC 호출 |
-| 직렬화 | 컨텐츠 단위 직렬화 | 컨텐츠 단위 직렬화 |
-| 메시지 모델 | 이벤트 | 요청/응답(RPC) |
-| 구조 초점 | 실행 모델 | 통신 모델 |
+    ContentA --> LogicA["A 로직 순차 실행"]
+    ContentB --> LogicB["B 로직 순차 실행"]
+    ContentC --> LogicC["C 로직 순차 실행"]
+```
 
----
+## 콘텐츠 등록과 수명 관리
 
-## 특징
+`ContentsServer`는 Contents Number를 Key로 사용하는 콘텐츠 맵을 관리합니다.
 
-- RPC 기반으로 명확한 요청/응답 흐름 구성
-- 네트워크 계층과 컨텐츠 계층의 역할 분리
-- 다양한 서버 구조에 적용 가능한 확장성 확보
-- 실제 게임 서버 구조에 가까운 처리 모델 구성
+```cpp
+std::unordered_map<std::int32_t, std::shared_ptr<Contents>> _contentsMap;
+```
 
+| API | 역할 |
+|---|---|
+| `RegisterContents()` | 콘텐츠 등록 |
+| `DeregisterContents()` | 콘텐츠 등록 해제 |
+| `SetDefaultContents()` | 신규 Session의 기본 콘텐츠 지정 |
+| `InsertToContents()` | 콘텐츠 입장 이벤트 등록 |
+| `DeleteFromContents()` | 콘텐츠 퇴장 이벤트 등록 |
+| `TryMoveSessionToContents()` | Session의 현재 콘텐츠 변경 |
+
+Worker Thread는 콘텐츠 맵에서 `shared_ptr<Contents>`를 복사한 뒤 Map Shared Lock을 해제합니다.
+
+```text
+Map Shared Lock 획득
+→ 콘텐츠 조회 및 shared_ptr 복사
+→ Map Shared Lock 해제
+→ 콘텐츠별 Lock 획득
+→ 콘텐츠 로직 실행
+```
+
+다른 Thread가 실행 중인 콘텐츠를 맵에서 제거하더라도 Worker Thread가 보유한 `shared_ptr`가 실행이 끝날 때까지 객체의 수명을 유지합니다.
+
+마지막 참조가 해제된 시점에 객체가 파괴되거나 설정된 Custom Deleter가 실행됩니다.
+
+## Frame Scheduler
+
+Frame Scheduler는 10ms 주기로 콘텐츠 맵을 확인합니다.
+
+각 콘텐츠에 설정된 Frame이 도달하면 Contents Number를 이용해 IOCP에 `OnUpdate()` 작업을 등록합니다. 실제 `OnUpdate()`는 IOCP Worker Thread가 콘텐츠별 Lock을 획득한 뒤 실행합니다.
+
+```mermaid
+sequenceDiagram
+    participant Scheduler as Frame Scheduler
+    participant IOCP as IOCP Queue
+    participant Worker as Worker Thread
+    participant Content as Contents
+
+    Scheduler->>Scheduler: Frame 도달 여부 확인
+    Scheduler->>IOCP: OnUpdate 작업 등록
+    IOCP->>Worker: 작업 전달
+    Worker->>Content: 콘텐츠 조회 및 Lock 획득
+    Worker->>Content: OnUpdate()
+```
+
+Frame Scheduler는 콘텐츠 맵을 순회해 실행할 Contents Number를 수집한 뒤 Map Shared Lock을 해제합니다.
+
+## 세션과 콘텐츠 이동
+
+새로 연결된 Session은 `SetDefaultContents()`로 지정한 기본 콘텐츠에 배치됩니다.
+
+Session을 다른 콘텐츠로 이동할 때는 다음 기능을 조합하여 사용합니다.
+
+```text
+기존 콘텐츠에서 이동 준비
+→ Session의 Contents Number 변경
+→ 대상 콘텐츠 OnEnter 작업 등록
+```
+
+`TryMoveSessionToContents()`는 Session이 유효하고 연결 종료 중이 아닌 경우에만 Contents Number를 변경합니다.
+
+이동 중간 상태에는 `CONMOV(-1)`을 사용할 수 있습니다.
+
+## RPC 처리 구조
+
+ContentLibB는 Stub과 Proxy를 이용해 패킷 처리 코드를 분리합니다.
+
+```mermaid
+flowchart LR
+    Client -->|"Client → Server Packet"| Stub
+    Stub -->|"타입·인자 추출"| Handler["Contents Handler"]
+
+    Handler -->|"전송 함수 호출"| Proxy
+    Proxy -->|"패킷 생성"| Server["ContentsServer::SendPacket"]
+    Server --> Client
+```
+
+### Stub
+
+Stub은 수신 패킷에서 메시지 타입과 인자를 추출한 뒤 해당 처리 함수를 호출합니다.
+
+정의되지 않은 메시지 타입은 콘텐츠별 Default 처리 함수로 전달합니다.
+
+### Proxy
+
+Proxy는 메시지 타입과 인자를 패킷에 기록하고 지정된 Session에 전송합니다.
+
+## RPC Compiler
+
+`ServerRPCCompiler`는 RPC Definition 파일을 읽어 패킷 처리 코드를 생성하는 도구입니다.
+
+```mermaid
+flowchart LR
+    Definition["RPC Definition"] --> Compiler["ServerRPCCompiler"]
+    Compiler --> Define["Define.h"]
+    Compiler --> Stub["Stub.h / Stub.cpp"]
+    Compiler --> Proxy["Proxy.h / Proxy.cpp"]
+```
+
+### Definition 형식
+
+```text
+#Fighter#
+<Fight>
+{
+CS CSMoveStart(unsigned char dir, unsigned short x, unsigned short y); #10
+SC SCMoveStart(unsigned int id, unsigned char dir, unsigned short x, unsigned short y); #11
+}
+```
+
+| 문법 | 의미 |
+|---|---|
+| `#Fighter#` | 출력 파일과 디렉터리 Prefix |
+| `<Fight>` | 생성할 Stub·Proxy 클래스 이름 |
+| `CS` | Client → Server 메시지 |
+| `SC` | Server → Client 메시지 |
+| 함수명 | 생성할 처리 또는 전송 함수 |
+| 함수 인자 | 패킷에서 읽거나 기록할 데이터 |
+| `#10` | 메시지 타입 ID |
+
+각 함수는 한 줄로 정의하며 메시지 타입 ID가 중복되지 않도록 작성해야 합니다.
+
+### 생성 결과
+
+`#Fighter#` Definition을 입력하면 `RPC_Fighter` 디렉터리에 다음 파일을 생성합니다.
+
+```text
+RPC_Fighter/
+├── FighterDefine.h
+├── FighterStub.h
+├── FighterStub.cpp
+├── FighterProxy.h
+└── FighterProxy.cpp
+```
+
+| 파일 | 역할 |
+|---|---|
+| `FighterDefine.h` | 메시지 타입 ID 정의 |
+| `FighterStub.h/.cpp` | 메시지 분기, 인자 추출 및 처리 함수 호출 |
+| `FighterProxy.h/.cpp` | 패킷 생성 및 Session 전송 |
+
+### 실행
+
+RPC Compiler 실행 파일에 Definition 파일을 인자로 전달합니다.
+
+```text
+ServerRPCCompiler.exe RPCDefinition.txt
+```
+
+출력 디렉터리는 실행 시점의 현재 작업 디렉터리를 기준으로 생성됩니다.
+
+## Stub·Proxy 연결
+
+생성된 Stub과 Proxy는 서버 또는 콘텐츠에 연결하여 사용합니다.
+
+```cpp
+AttachStub(stub);
+AttachProxy(proxy);
+```
+
+Stub의 처리 인터페이스를 상속하여 실제 콘텐츠 로직을 구현합니다.
+
+```cpp
+class StubForFight : public FightStub
+{
+public:
+    void ProcCSMoveStart(std::int64_t sessionID, unsigned char dir, unsigned short x, unsigned short y) override;
+};
+```
+
+## 관련 문서
+
+- [MO Session Server](../../README.md)
+- [Battle Session Server](../../Servers/BattleSessionServer/README.md)
+- [Common](../../Common/README.md)
+- [Lock-Free Containers](../../Common/LockFree/README.md)
+- [TLS Utilities](../../Common/TLS/README.md)
