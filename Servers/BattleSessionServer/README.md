@@ -150,6 +150,14 @@ Control Thread가 실행 도중 콘텐츠를 맵에서 제거하더라도 Worker
 
 마지막 참조가 해제되면 Custom Deleter가 실행되어 `FightContents`를 Object Pool로 반환합니다. 이를 통해 콘텐츠 맵의 Lock 점유 범위와 콘텐츠 객체의 수명 관리를 분리했습니다.
 
+### 콘텐츠 맵 Lock 프로파일링
+
+Raw Pointer와 `shared_ptr` 적용 버전을 동일한 조건에서 약 24시간 실행하여 콘텐츠 맵 Lock의 대기 및 점유 시간을 비교했습니다.
+
+- [Raw Pointer 적용 결과](docs/profiling/content-lock-before.txt)
+- [shared_ptr 적용 결과](docs/profiling/content-lock-after.txt)
+- [관련 PR #24](https://github.com/wOwOv/MO_Session_Server/pull/24)
+
 ## Match ID 생성
 
 각 전투에는 `MatchIDGenerator`가 생성한 64비트 Match ID를 부여합니다.
@@ -209,6 +217,23 @@ Deadlock 또는 Lock Timeout은 다음 조건을 만족하는 경우에만 재�
 Commit 결과를 확인할 수 없거나 Rollback에 실패한 경우에는 중복 저장 가능성을 고려하여 자동 재시도하지 않습니다.
 
 DB Worker Thread의 개수는 설정을 통해 1~4개로 지정할 수 있습니다.
+
+### DB 저장 성능 측정
+
+DB Worker 수에 따른 저장 성능과 InnoDB Buffer Pool·Redo Log 설정에 따른 처리 시간을 비교했습니다.
+
+#### DB Worker 수 비교
+
+- [DB Worker 1개](docs/profiling/db-worker-1.txt)
+- [DB Worker 2개](docs/profiling/db-worker-2.txt)
+- [관련 PR #32](https://github.com/wOwOv/MO_Session_Server/pull/32)
+
+#### InnoDB 설정 비교
+
+- [Buffer Pool 512MB / Redo Log 100MB](docs/profiling/db-buffer-512-redo-100.txt)
+- [Buffer Pool 128MB / Redo Log 512MB](docs/profiling/db-buffer-128-redo-512.txt)
+- [Buffer Pool 512MB / Redo Log 512MB](docs/profiling/db-buffer-512-redo-512.txt)
+- [관련 Issue #35](https://github.com/wOwOv/MO_Session_Server/issues/35)
 
 ## DB 구조 및 저장 결과
 
