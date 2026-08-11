@@ -1,0 +1,7 @@
+Name|Average(us)|Min(us)|Max(us)|Call
+DB_SaveBattleResult          |      19888.054 |       2135.900 |    3510135.700 |       209766
+DB_SaveBattleResult_Begin    |        126.642 |         70.600 |      17498.200 |       209767
+DB_SaveBattleResult_Commit   |       6084.194 |        997.200 |    2468588.600 |       209766
+DB_SaveBattleResult_InsertHistory |        424.236 |        159.000 |     295346.300 |       209767
+DB_SaveBattleResult_InsertRecords |       1661.551 |        382.600 |     799021.200 |       209767
+DB_SaveBattleResult_UpsertStats |      11585.353 |        250.800 |    1365627.500 |       209766
