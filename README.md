@@ -71,7 +71,7 @@ DB Worker는 다음 데이터를 하나의 Transaction으로 저장합니다.
 
 `FightContents`의 생성과 해제를 Control Thread로 분리하여 콘텐츠 실행 로직과 생명주기 관리를 분리했습니다.
 
-콘텐츠 조회와 실행에 필요한 구간에서만 Shared Lock을 점유하도록 Lock 범위를 줄였습니다. 이를 통해 콘텐츠 등록·해제를 담당하는 Control Thread의 Exclusive Lock 대기 시간을 줄였습니다.
+콘텐츠 맵에서는 조회와 `shared_ptr` 복사에 필요한 구간에서만 Shared Lock을 점유합니다. 이후 Map Lock을 해제하고 콘텐츠별 Lock을 획득하여 로직을 실행합니다. 이를 통해 Control Thread의 Exclusive Lock 대기 시간을 줄이면서 실행 중인 콘텐츠의 수명을 안전하게 유지합니다. 이를 통해 콘텐츠 등록·해제를 담당하는 Control Thread의 Exclusive Lock 대기 시간을 줄였습니다.
 
 ### RPC 코드 생성
 
@@ -84,9 +84,9 @@ DB Worker는 다음 데이터를 하나의 Transaction으로 저장합니다.
 `FighterServer`가 수집한 서버 상태와 처리 지표를 `MonitorClient`를 통해 외부 모니터링 서버로 전송합니다.
 
 - 현재 접속자 수
-- 초당 Accept 및 Disconnect 수
+- 초당 Accept 및 패킷 송수신 수
+- 초당 `FightContents` 생성 및 해제 수
 - 초당 송수신 패킷 수
-- 초당 콘텐츠 업데이트 횟수
 - 사용 중인 `FightContents` 수
 - Fight FPS 평균·최솟값·최댓값
 - Object Pool 사용량
