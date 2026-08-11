@@ -154,6 +154,7 @@ MO_Session_Server/
 
 - [Battle Session Server](Servers/BattleSessionServer/README.md)
 - [ContentLibB](Libraries/ContentLibB/README.md)
+- [MonitorClient](MonitorClient/README.md)
 - [Common](Common/README.md)
 - [Lock-Free Containers](Common/LockFree/README.md)
 - [TLS Utilities](Common/TLS/README.md)
