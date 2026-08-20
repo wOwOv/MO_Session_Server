@@ -243,7 +243,7 @@ CPacket& CPacket::operator>>(unsigned short& value)
 	return *this;
 }
 
-CPacket& CPacket::operator>>(unsigned int value)
+CPacket& CPacket::operator>>(unsigned int& value)
 {
 	if (SBuf->GetDataSize() >= sizeof(value))
 	{
