@@ -8,12 +8,12 @@
 class SBuffer
 {
 protected:
-	int	BufferSize;//¹öÆÛ ÀüÃ¼ »çÀÌÁî
+	int	BufferSize;//ë²„í¼ ì „ì²´ ì‚¬ì´ì¦ˆ
 	char* buffer;
 	int read;
 	int write;
 
-	int	DataSize;//»ç¿ëÁßÀÎ »çÀÌÁî
+	int	DataSize;//ì‚¬ìš©ì¤‘ì¸ ì‚¬ì´ì¦ˆ
 public:
 	int refcnt;
 
@@ -36,23 +36,23 @@ public:
 
 	enum en_CBuffer
 	{
-		BUFFER_DEFAULT = 300		// ÆĞÅ¶ÀÇ ±âº» ¹öÆÛ »çÀÌÁî.
+		BUFFER_DEFAULT = 300		// íŒ¨í‚·ì˜ ê¸°ë³¸ ë²„í¼ ì‚¬ì´ì¦ˆ.
 	};
 
 	//////////////////////////////////////////////////////////////////////////
-	// »ı¼ºÀÚ, ÆÄ±«ÀÚ.
+	// ìƒì„±ì, íŒŒê´´ì.
 	//
 	// Return:
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline SBuffer() :read(0), write(0), BufferSize(BUFFER_DEFAULT), DataSize(0), refcnt(0), eFlag(0)
 	{
-		//±âº» ¹öÆÛ »çÀÌÁî ÇÒ´ç
+		//ê¸°ë³¸ ë²„í¼ ì‚¬ì´ì¦ˆ í• ë‹¹
 		buffer = (char*)malloc(BUFFER_DEFAULT);
 		InitializeSRWLock(&eKey);
 	}
 	__forceinline SBuffer(int size) :read(0), write(0), BufferSize(size), DataSize(0), refcnt(0), eFlag(0)
 	{
-		//ÀÎÀÚÀÇ BufferSize¸¸Å­ ÇÒ´ç
+		//ì¸ìì˜ BufferSizeë§Œí¼ í• ë‹¹
 		buffer = (char*)malloc(BufferSize);
 		InitializeSRWLock(&eKey);
 	}
@@ -64,10 +64,10 @@ public:
 
 
 	//////////////////////////////////////////////////////////////////////////
-	// ÆĞÅ¶ Ã»¼Ò.
+	// íŒ¨í‚· ì²­ì†Œ.
 	//
-	// Parameters: ¾øÀ½.
-	// Return: ¾øÀ½.
+	// Parameters: ì—†ìŒ.
+	// Return: ì—†ìŒ.
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline void	Clear(void)
 	{
@@ -79,20 +79,20 @@ public:
 
 
 	//////////////////////////////////////////////////////////////////////////
-	// ¹öÆÛ »çÀÌÁî ¾ò±â.
+	// ë²„í¼ ì‚¬ì´ì¦ˆ ì–»ê¸°.
 	//
-	// Parameters: ¾øÀ½.
-	// Return: (int)ÆĞÅ¶ ¹öÆÛ »çÀÌÁî ¾ò±â.
+	// Parameters: ì—†ìŒ.
+	// Return: (int)íŒ¨í‚· ë²„í¼ ì‚¬ì´ì¦ˆ ì–»ê¸°.
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline int	GetBufferSize(void)
 	{
 		return BufferSize;
 	}
 	//////////////////////////////////////////////////////////////////////////
-	// ÇöÀç »ç¿ëÁßÀÎ »çÀÌÁî ¾ò±â.
+	// í˜„ì¬ ì‚¬ìš©ì¤‘ì¸ ì‚¬ì´ì¦ˆ ì–»ê¸°.
 	//
-	// Parameters: ¾øÀ½.
-	// Return: (int)»ç¿ëÁßÀÎ µ¥ÀÌÅ¸ »çÀÌÁî.
+	// Parameters: ì—†ìŒ.
+	// Return: (int)ì‚¬ìš©ì¤‘ì¸ ë°ì´íƒ€ ì‚¬ì´ì¦ˆ.
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline int		GetDataSize(void)
 	{
@@ -102,10 +102,10 @@ public:
 
 
 	//////////////////////////////////////////////////////////////////////////
-	// ¹öÆÛ Æ÷ÀÎÅÍ ¾ò±â.
+	// ë²„í¼ í¬ì¸í„° ì–»ê¸°.
 	//
-	// Parameters: ¾øÀ½.
-	// Return: (char *)¹öÆÛ Æ÷ÀÎÅÍ.
+	// Parameters: ì—†ìŒ.
+	// Return: (char *)ë²„í¼ í¬ì¸í„°.
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline char* GetBufferPtr(void)
 	{
@@ -121,11 +121,11 @@ public:
 	}
 
 	//////////////////////////////////////////////////////////////////////////
-	// ¹öÆÛ Pos ÀÌµ¿. (À½¼öÀÌµ¿Àº ¾ÈµÊ)
-	// GetBufferPtr ÇÔ¼ö¸¦ ÀÌ¿ëÇÏ¿© ¿ÜºÎ¿¡¼­ °­Á¦·Î ¹öÆÛ ³»¿ëÀ» ¼öÁ¤ÇÒ °æ¿ì »ç¿ë. 
+	// ë²„í¼ Pos ì´ë™. (ìŒìˆ˜ì´ë™ì€ ì•ˆë¨)
+	// GetBufferPtr í•¨ìˆ˜ë¥¼ ì´ìš©í•˜ì—¬ ì™¸ë¶€ì—ì„œ ê°•ì œë¡œ ë²„í¼ ë‚´ìš©ì„ ìˆ˜ì •í•  ê²½ìš° ì‚¬ìš©. 
 	//
-	// Parameters: (int) ÀÌµ¿ »çÀÌÁî.
-	// Return: (int) ÀÌµ¿µÈ »çÀÌÁî.
+	// Parameters: (int) ì´ë™ ì‚¬ì´ì¦ˆ.
+	// Return: (int) ì´ë™ëœ ì‚¬ì´ì¦ˆ.
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline int		MoveWritePos(int size)
 	{
@@ -141,7 +141,7 @@ public:
 	}
 
 
-	//¿¬»êÀÚ ¿À¹ö·Îµù
+	//ì—°ì‚°ì ì˜¤ë²„ë¡œë”©
 	__forceinline SBuffer& operator=(SBuffer& srcbuffer)
 	{
 		memcpy(GetBufferPtr(), srcbuffer.buffer, srcbuffer.GetBufferSize());
@@ -311,7 +311,7 @@ public:
 
 
 	//////////////////////////////////////////////////////////////////////////
-	// »©±â.	°¢ º¯¼ö Å¸ÀÔ¸¶´Ù ¸ğµÎ ¸¸µë.
+	// ë¹¼ê¸°.	ê° ë³€ìˆ˜ íƒ€ì…ë§ˆë‹¤ ëª¨ë‘ ë§Œë“¬.
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline SBuffer& operator>>(unsigned char &value)
 	{
@@ -392,7 +392,7 @@ public:
 		return *this;
 	}*/
 
-	__forceinline SBuffer& operator >> (unsigned int value)
+	__forceinline SBuffer& operator >> (unsigned int& value)
 	{
 		if (DataSize >= sizeof(value))
 		{
@@ -476,21 +476,21 @@ public:
 
 
 	//////////////////////////////////////////////////////////////////////////
-	// µ¥ÀÌÅ¸ ¾ò±â.
+	// ë°ì´íƒ€ ì–»ê¸°.
 	//
-	// Parameters: (char *)Dest Æ÷ÀÎÅÍ. (int)Size.
-	// Return: (int)º¹»çÇÑ »çÀÌÁî.
+	// Parameters: (char *)Dest í¬ì¸í„°. (int)Size.
+	// Return: (int)ë³µì‚¬í•œ ì‚¬ì´ì¦ˆ.
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline int		GetData(char* dest, int size)
 	{
 
-		//»ç¿ëÁßÀÎ °ø°£ÀÌ 0ÀÏ ¶§
+		//ì‚¬ìš©ì¤‘ì¸ ê³µê°„ì´ 0ì¼ ë•Œ
 		if (DataSize == 0)
 		{
 			return 0;
 		}
 
-		//»ç¿ëÁßÀÎ °ø°£ÀÌ »©ÁÙ µ¥ÀÌÅÍ¾çº¸´Ù Å¬ ¶§
+		//ì‚¬ìš©ì¤‘ì¸ ê³µê°„ì´ ë¹¼ì¤„ ë°ì´í„°ì–‘ë³´ë‹¤ í´ ë•Œ
 		if (DataSize >= size)
 		{
 			memcpy(dest, &buffer[read], size);
@@ -498,7 +498,7 @@ public:
 			DataSize -= size;
 			return size;
 		}
-		//»ç¿ëÁßÀÎ °ø°£ÀÌ »©ÁÙ µ¥ÀÌÅÍ¾çº¸´Ù ÀÛ¾Æ¼­ ±×³É ÀÖ´Â°Å ´Ù »©ÁÙ¶§..?
+		//ì‚¬ìš©ì¤‘ì¸ ê³µê°„ì´ ë¹¼ì¤„ ë°ì´í„°ì–‘ë³´ë‹¤ ì‘ì•„ì„œ ê·¸ëƒ¥ ìˆëŠ”ê±° ë‹¤ ë¹¼ì¤„ë•Œ..?
 		else
 		{
 			memcpy(dest, &buffer[read], DataSize);
@@ -511,19 +511,19 @@ public:
 	}
 
 	//////////////////////////////////////////////////////////////////////////
-	// µ¥ÀÌÅ¸ »ğÀÔ.
+	// ë°ì´íƒ€ ì‚½ì….
 	//
-	// Parameters: (char *)Src Æ÷ÀÎÅÍ. (int)SrcSize.
-	// Return: (int)º¹»çÇÑ »çÀÌÁî.
+	// Parameters: (char *)Src í¬ì¸í„°. (int)SrcSize.
+	// Return: (int)ë³µì‚¬í•œ ì‚¬ì´ì¦ˆ.
 	//////////////////////////////////////////////////////////////////////////
 	__forceinline int		PutData(char* src, int srcsize)
 	{
-		//³ÖÀ» ¼ö ÀÖ´Â °ø°£ÀÌ ¾øÀ»¶§
+		//ë„£ì„ ìˆ˜ ìˆëŠ” ê³µê°„ì´ ì—†ì„ë•Œ
 		if (DataSize == BufferSize)
 		{
 			return 0;
 		}
-		//³ÖÀ» ¼ö ÀÖ´Â °ø°£ÀÌ ÃæºĞÇÒ ¶§
+		//ë„£ì„ ìˆ˜ ìˆëŠ” ê³µê°„ì´ ì¶©ë¶„í•  ë•Œ
 		if (BufferSize - DataSize >= srcsize)
 		{
 			memcpy(&buffer[write], src, srcsize);
@@ -531,7 +531,7 @@ public:
 			DataSize += srcsize;
 			return srcsize;
 		}
-		//³ÖÀ» ¼ö ÀÕ´Â °ø°£ÀÌ ºÎÁ·ÇÒ ¶§ ÃÖ´ëÇÑ ³Ö¾îÁÖ±â
+		//ë„£ì„ ìˆ˜ ì‡ëŠ” ê³µê°„ì´ ë¶€ì¡±í•  ë•Œ ìµœëŒ€í•œ ë„£ì–´ì£¼ê¸°
 		else
 		{
 			int size = BufferSize - DataSize;
@@ -542,7 +542,7 @@ public:
 		}
 	}
 
-	//ÂüÁ¶Ä«¿îÆ® n Áõ°¡
+	//ì°¸ì¡°ì¹´ìš´íŠ¸ n ì¦ê°€
 	__forceinline int AddRefcnt(int n)
 	{
 		int ret = InterlockedAdd((LONG*)&refcnt, n);
@@ -550,7 +550,7 @@ public:
 		return ret;
 	}
 
-	//ÂüÁ¶Ä«¿îÆ® n °¨¼Ò
+	//ì°¸ì¡°ì¹´ìš´íŠ¸ n ê°ì†Œ
 	__forceinline int SubRefcnt(int n)
 	{
 		int ret = InterlockedAdd((LONG*)&refcnt, -n);
@@ -558,7 +558,7 @@ public:
 		return ret;
 	}
 
-	//ÂüÁ¶Ä«¿îÆ® 1 °¨¼Ò
+	//ì°¸ì¡°ì¹´ìš´íŠ¸ 1 ê°ì†Œ
 	__forceinline long DecRefcnt()
 	{
 		long check = InterlockedDecrement((LONG*)&refcnt);
