@@ -30,26 +30,26 @@ public:
 
 	void	Clear(void);
 
-	// ¹öÆÛ »çÀÌÁî ¾ò±â.
+	// ë²„í¼ ì‚¬ì´ì¦ˆ ì–»ê¸°.
 	int	GetBufferSize(void);
 
-	// ÇöÀç »ç¿ëÁßÀÎ »çÀÌÁî ¾ò±â.
+	// í˜„ì¬ ì‚¬ìš©ì¤‘ì¸ ì‚¬ì´ì¦ˆ ì–»ê¸°.
 	int		GetDataSize(void);
 
 
 
-	// ¹öÆÛ Æ÷ÀÎÅÍ ¾ò±â.
+	// ë²„í¼ í¬ì¸í„° ì–»ê¸°.
 	char* GetBufferPtr(void);
 	char* GetReadPtr(void);
 	char* GetWritePtr(void);
 
-	// ¹öÆÛ Pos ÀÌµ¿. (À½¼öÀÌµ¿Àº ¾ÈµÊ)
-	// GetBufferPtr ÇÔ¼ö¸¦ ÀÌ¿ëÇÏ¿© ¿ÜºÎ¿¡¼­ °­Á¦·Î ¹öÆÛ ³»¿ëÀ» ¼öÁ¤ÇÒ °æ¿ì »ç¿ë. 
+	// ë²„í¼ Pos ì´ë™. (ìŒìˆ˜ì´ë™ì€ ì•ˆë¨)
+	// GetBufferPtr í•¨ìˆ˜ë¥¼ ì´ìš©í•˜ì—¬ ì™¸ë¶€ì—ì„œ ê°•ì œë¡œ ë²„í¼ ë‚´ìš©ì„ ìˆ˜ì •í•  ê²½ìš° ì‚¬ìš©. 
 	int		MoveWritePos(int iSize);
 	int		MoveReadPos(int iSize);
 
 
-	//¿¬»êÀÚ ¿À¹ö·Îµù
+	//ì—°ì‚°ì ì˜¤ë²„ë¡œë”©
 	CPacket& operator=(CPacket& srcbuffer);
 
 	CPacket& operator << (unsigned char value);
@@ -71,7 +71,7 @@ public:
 	CPacket& operator << (double value);
 
 	//////////////////////////////////////////////////////////////////////////
-	// »©±â.	°¢ º¯¼ö Å¸ÀÔ¸¶´Ù ¸ğµÎ ¸¸µë.
+	// ë¹¼ê¸°.	ê° ë³€ìˆ˜ íƒ€ì…ë§ˆë‹¤ ëª¨ë‘ ë§Œë“¬.
 	//////////////////////////////////////////////////////////////////////////
 	CPacket& operator>>(unsigned char& value);
 	CPacket& operator>>(signed char& value);
@@ -82,7 +82,7 @@ public:
 	CPacket& operator>>(unsigned short& value);
 	//CPacket& operator>>(WORD& value);
 
-	CPacket& operator >> (unsigned int value);
+	CPacket& operator >> (unsigned int& value);
 	CPacket& operator>>(int& value);
 	CPacket& operator>>(long& value);
 	CPacket& operator>>(float& value);
@@ -92,10 +92,10 @@ public:
 	CPacket& operator>>(double& value);
 
 
-	// µ¥ÀÌÅ¸ ¾ò±â.
+	// ë°ì´íƒ€ ì–»ê¸°.
 	int		GetData(char* dest, int size);
 
-	// µ¥ÀÌÅ¸ »ğÀÔ.
+	// ë°ì´íƒ€ ì‚½ì….
 	int		PutData(char* src, int srcsize);
 
 
